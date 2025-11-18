@@ -1,0 +1,18 @@
+# python 3
+__pycache__
+
+#python 2
+*.pyc
+
+# ignore any result files
+*.png
+*.pdf
+*.gif
+*.pickle
+*.sh
+*.npz
+*.csv
+*.txt
+
+# Ignore PyCharm stuff
+.idea

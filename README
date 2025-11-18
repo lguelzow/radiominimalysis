@@ -1,0 +1,19 @@
+Reduced version of RadioAnalysis for GRAND reconstruction and modifications based on simulations
+Will mainly contain the main files needed for these purposes while leaving out the rest of the repository
+
+Old README
+
+This README needs to be extended with time.
+
+Some pip modules needed (install with pip --user install <module>):
+
+- iminuit, lmfit, scipy, numpy, matplotlib, ray
+
+External packages needed: 
+
+ - radiotools (https://github.com/nu-radio/radiotools.git)
+
+Clone them (with "git clone") and add them to your PYTHONPATH enviourmental variable
+
+You have to add the root path of this project to your PYTHONPATH, i.e.,
+export PYTHONPATH=$PYTHONPATH:/path/to/RadioAnalysis
