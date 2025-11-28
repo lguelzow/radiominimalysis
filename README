@@ -12,6 +12,9 @@ Some pip modules needed (install with pip --user install <module>):
 External packages needed: 
 
  - radiotools (https://github.com/nu-radio/radiotools.git)
+ - GRANDlib (for any interactions with simulations processed by GRAND or measurement data)
+ - electric field reconstruction (for realistic ADC trace simulations and measurement data)
+ - PWF_reconstruction (for reconstruction of arrival direction)
 
 Clone them (with "git clone") and add them to your PYTHONPATH enviourmental variable
 
