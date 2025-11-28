@@ -1,7 +1,7 @@
-from RadioAnalysis.framework.parameters import stationParameters as stp, showerParameters as shp
-from RadioAnalysis.utilities import charge_excess as ce, geomagnetic_emission, cherenkov_radius as che
+from radiominimalysis.framework.parameters import stationParameters as stp, showerParameters as shp
+from radiominimalysis.utilities import charge_excess as ce, geomagnetic_emission, cherenkov_radius as che
 
-from RadioAnalysis.utilities import helpers
+from radiominimalysis.utilities import helpers
 from radiotools import helper as rdhelp
 
 import sys
@@ -405,7 +405,7 @@ def reconstruct_emission_from_param(events, para):
 if __name__ == "__main__":
     def plot_maximum_in_footprints(events, para):
         from matplotlib import pyplot as plt
-        from RadioAnalysis.framework import factory
+        from radiominimalysis.framework import factory
 
         pos = factory.get_parameter(events, shp.position_maximum_energy_fluence_interpolated_2d)
         f = factory.get_parameter(events, shp.maximum_energy_fluence_interpolated_2d)

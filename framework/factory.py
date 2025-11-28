@@ -10,8 +10,8 @@ import sys
 import time
 from datetime import timedelta
 
-import RadioAnalysis.framework.revent
-from RadioAnalysis.framework.parameters import (
+import radiominimalysis.framework.revent
+from radiominimalysis.framework.parameters import (
     stationParameters,
     showerParameters,
     eventParameters,
@@ -39,11 +39,11 @@ class EventFactory(object):
         if events is not None:
             for event in events:
                 # check that event is a radio event
-                if not isinstance(event, RadioAnalysis.framework.revent.REvent):
+                if not isinstance(event, radiominimalysis.framework.revent.REvent):
                     # print error message
                     print(event, type(event))
                     sys.exit(
-                        "Event must be a RadioAnalysis.framework.revent.REvent object"
+                        "Event must be a radiominimalysis.framework.revent.REvent object"
                     )
 
                 # append event to internal list of events
@@ -122,7 +122,7 @@ class EventFactory(object):
         # check that data a dictionary of serialised data from the serialise function
         if "__events" in data.keys():
             for event_pkl in data["__events"]:
-                event = RadioAnalysis.framework.revent.REvent(0, 0)
+                event = radiominimalysis.framework.revent.REvent(0, 0)
                 event.deserialize(event_pkl)
                 self.add_event(event)
 

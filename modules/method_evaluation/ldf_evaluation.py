@@ -1,16 +1,16 @@
 from tkinter import E
-from RadioAnalysis.framework import factory
-from RadioAnalysis.framework.parameters import \
+from radiominimalysis.framework import factory
+from radiominimalysis.framework.parameters import \
     showerParameters as shp, eventParameters as evp, stationParameters as stp
-from RadioAnalysis.utilities import helpers, stats as helperstats, energyreconstruction, plthelpers
+from radiominimalysis.utilities import helpers, stats as helperstats, energyreconstruction, plthelpers
 
-from RadioAnalysis.modules.CoREASanalysis.gauss_sigmoid_param import get_bins_for_x_from_binned_data
+from radiominimalysis.modules.method_evaluation.gauss_sigmoid_param import get_bins_for_x_from_binned_data
 
 from radiotools.atmosphere import models as atm
 from radiotools.analyses import radiationenergy
 from radiotools import helper
 
-from RadioAnalysis.modules.CoREASanalysis import pyplots, pyplots_utils
+from radiominimalysis.modules.method_evaluation import pyplots, pyplots_utils
 
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -1398,7 +1398,7 @@ def evaluate_fit_result(events, para):
         
         # np.savez_compressed(f"LDF_fit_pull_gp300_adc", fluence_pull)
         
-        pull_data_file = np.load('/cr/users/guelzow/simulations/radioanalysis/ldf_eval/LDF_fit_pull_gp300_adc.npz')
+        pull_data_file = np.load('/cr/users/guelzow/simulations/radiominimalysis/ldf_eval/LDF_fit_pull_gp300_adc.npz')
         pull_data = pull_data_file['arr_0']
         pull_mean_data = np.mean(pull_data)
         pull_width_data = np.std(pull_data)

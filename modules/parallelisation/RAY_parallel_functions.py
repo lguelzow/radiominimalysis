@@ -6,14 +6,14 @@ import sys
 import numpy as np
 import ray
 
-from RadioAnalysis.framework import factory as eventfactory
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework import factory as eventfactory
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
     stationParameters as stp,
 )
-from RadioAnalysis.modules.reconstruction import geometry, ldf_fitting, signal_emissions
-from RadioAnalysis.utilities import helpers, refractive_displacement
+from radiominimalysis.modules.reconstruction import geometry, ldf_fitting, signal_emissions
+from radiominimalysis.utilities import helpers, refractive_displacement
 
 # function to parallely use the code that takes a long time
 # for example fits and reconstructions and anything that processes simulations
@@ -64,7 +64,7 @@ def ray_parallelisation(args):
 
     # check if input is .hdf5 file
     elif args.paths[0][-5:] == ".hdf5":
-        from RadioAnalysis.input_output import coreas_reader
+        from radiominimalysis.input_output import coreas_reader
 
         # read data from simulation file
         reader = coreas_reader.readCoREASShower(
@@ -77,8 +77,8 @@ def ray_parallelisation(args):
     # check if input is directory
     elif os.path.isdir(args.paths[0]):
 
-        from RadioAnalysis.input_output.root_reader import ReadRootInput
-        # from RadioAnalysis.input_output.root_reader import read_root_file
+        from radiominimalysis.input_output.root_reader import ReadRootInput
+        # from radiominimalysis.input_output.root_reader import read_root_file
         
 
         # use ROOT reader tool to read out the showers from the input files
@@ -91,7 +91,7 @@ def ray_parallelisation(args):
 
     # check if input data is .root file
     elif args.paths[0][-5:] == ".root":
-        from RadioAnalysis.input_output import adst_reader
+        from radiominimalysis.input_output import adst_reader
 
         # read data from simulation file
         reader = adst_reader.readADSTEvent(
@@ -335,7 +335,7 @@ def get_predicted_core_displacement_ray(revent, args):
 @ray.remote
 def read_root_file_ray(path, args):
     
-    from RadioAnalysis.input_output.root_reader import read_root_file
+    from radiominimalysis.input_output.root_reader import read_root_file
 
     # and save it in the factory
     event_list = read_root_file([path], args)

@@ -5,12 +5,12 @@ try:
 except ImportError:
     import pickle
 
-from RadioAnalysis.framework.parameter_storage import (
+from radiominimalysis.framework.parameter_storage import (
     ParameterStorage,
     compare_parameter_storage,
 )
-from RadioAnalysis.framework import parameter_serialization, parameters
-import RadioAnalysis.framework.shower
+from radiominimalysis.framework import parameter_serialization, parameters
+import radiominimalysis.framework.shower
 
 import warnings
 import logging
@@ -441,7 +441,7 @@ class BaseEvent(ParameterStorage):
 
         if "showers" in data.keys():
             for shower_pkl in data["showers"]:
-                shower = RadioAnalysis.framework.shower.Shower(None)
+                shower = radiominimalysis.framework.shower.Shower(None)
                 shower.deserialize(shower_pkl)
                 self.add_shower(shower)
 

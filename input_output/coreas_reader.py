@@ -1,8 +1,8 @@
-import RadioAnalysis.framework.revent
-import RadioAnalysis.framework.shower
-from RadioAnalysis.framework.parameters import showerParameters as shp
-from RadioAnalysis.framework.parameters import stationParameters as stp
-from RadioAnalysis.framework.parameters import eventParameters as evp
+import radiominimalysis.framework.revent
+import radiominimalysis.framework.shower
+from radiominimalysis.framework.parameters import showerParameters as shp
+from radiominimalysis.framework.parameters import stationParameters as stp
+from radiominimalysis.framework.parameters import eventParameters as evp
 
 from radiotools import helper as rdhelp, coordinatesystems
 
@@ -104,7 +104,7 @@ class readCoREASShower:
         return timedelta(seconds=self.__t)
 
     def get_factory(self, factory=None):
-        from RadioAnalysis.framework.factory import EventFactory
+        from radiominimalysis.framework.factory import EventFactory
         if factory is None:
             factory = EventFactory()
 
@@ -119,13 +119,13 @@ def read_coreas_highlevel_files(input_file, add_traces=False):
     corsika = h5py.File(input_file, "r")
     f_coreas = corsika["CoREAS"]
 
-    evt = RadioAnalysis.framework.revent.REvent(corsika['inputs'].attrs['RUNNR'], corsika['inputs'].attrs['EVTNR'])
+    evt = radiominimalysis.framework.revent.REvent(corsika['inputs'].attrs['RUNNR'], corsika['inputs'].attrs['EVTNR'])
     evt.set_parameter(evp.file, input_file.split("/")[-1])
     evt.set_parameter(evp.time, f_coreas.attrs["GPSSecs"])
     evt.set_parameter(evp.refractive_index_at_sea_level, f_coreas.attrs["GroundLevelRefractiveIndex"])
 
     # create shower object
-    shower = RadioAnalysis.framework.shower.Shower(evp.sim_shower)
+    shower = radiominimalysis.framework.shower.Shower(evp.sim_shower)
     
     shower.set_parameter(shp.atmosphere_model, corsika["inputs"].attrs["ATMOD"])
     # in auger CS, function just works if inputs are in highlevel file

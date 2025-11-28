@@ -7,12 +7,12 @@ from scipy import stats
 import matplotlib.ticker as tick 
 import cmasher as cmr
 
-from RadioAnalysis.framework import factory
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework import factory
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
 )
-from RadioAnalysis.utilities import (
+from radiominimalysis.utilities import (
     cherenkov_radius as che,
     helpers,
     stats as helperstats,

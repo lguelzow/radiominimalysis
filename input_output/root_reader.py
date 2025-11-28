@@ -1,8 +1,8 @@
-import RadioAnalysis.framework.revent
-import RadioAnalysis.framework.shower
-from RadioAnalysis.framework.parameters import showerParameters as shp
-from RadioAnalysis.framework.parameters import stationParameters as stp
-from RadioAnalysis.framework.parameters import eventParameters as evp
+import radiominimalysis.framework.revent
+import radiominimalysis.framework.shower
+from radiominimalysis.framework.parameters import showerParameters as shp
+from radiominimalysis.framework.parameters import stationParameters as stp
+from radiominimalysis.framework.parameters import eventParameters as evp
 
 from radiotools import helper as rdhelp, coordinatesystems
 
@@ -98,7 +98,7 @@ class ReadRootInput:
         return timedelta(seconds=self.__t)
 
     def get_factory(self, factory=None):
-        from RadioAnalysis.framework.factory import EventFactory
+        from radiominimalysis.framework.factory import EventFactory
         if factory is None:
             factory = EventFactory()
 
@@ -175,7 +175,7 @@ def read_root_file(input_directories, args=None):
         if read_data:
 
             from RadioAnalysis.input_output.VocToEfield import efield_reconstruction_from_measurement
-            from RadioAnalysis.input_output import grand_data_reader
+            from radiominimalysis.input_output import grand_data_reader
 
             # decide whether to save efield traces
             save_efield_traces = False
@@ -316,13 +316,13 @@ def read_root_file(input_directories, args=None):
                     print('Going to sleep for', sec, 'seconds...')
                     time.sleep(int(sec))
 
-                # save parameters into RadioAnalysis revent class
+                # save parameters into radiominimalysis revent class
 
                 # 
                 # Event-wide parameters
                 #
 
-                evt = RadioAnalysis.framework.revent.REvent(run_number, event_number)
+                evt = radiominimalysis.framework.revent.REvent(run_number, event_number)
                 evt.set_parameter(evp.file, input_file.split("/")[-1])
                 evt.set_parameter(evp.time, 0) # TODO: do I need this?
 
@@ -333,7 +333,7 @@ def read_root_file(input_directories, args=None):
                 evt.set_parameter(evp.magnetic_field_vector, mag_field_vector)
 
                 # create shower object and set shower parameters
-                shower = RadioAnalysis.framework.shower.Shower(evp.GRAND_shower)
+                shower = radiominimalysis.framework.shower.Shower(evp.GRAND_shower)
                 
                 # set atmosphere model and observation level
                 shower.set_parameter(shp.atmosphere_model, 41)
@@ -730,7 +730,7 @@ def read_root_file(input_directories, args=None):
                     exit()
 
                 #########
-                # now feed data into Radioanalysis framework
+                # now feed data into radiominimalysis framework
                 #########
 
 
@@ -738,7 +738,7 @@ def read_root_file(input_directories, args=None):
                 # Secton for event-wide parameters
                 #
 
-                evt = RadioAnalysis.framework.revent.REvent(run_number, event_number)
+                evt = radiominimalysis.framework.revent.REvent(run_number, event_number)
                 evt.set_parameter(evp.file, input_file.split("/")[-1])
                 evt.set_parameter(evp.time, 0) # TODO: do I need this?
 
@@ -746,7 +746,7 @@ def read_root_file(input_directories, args=None):
                 evt.set_parameter(evp.refractive_index_at_sea_level, 1.000273455)
 
                 # create shower object and set shower parameters
-                shower = RadioAnalysis.framework.shower.Shower(evp.sim_shower)
+                shower = radiominimalysis.framework.shower.Shower(evp.sim_shower)
                 
                 # set atmosphere model and observation level
                 shower.set_parameter(shp.atmosphere_model, 41)

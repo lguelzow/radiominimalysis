@@ -4,7 +4,7 @@ import numpy as np
 from radiotools.atmosphere import models as atm
 from scipy import constants
 
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
 )

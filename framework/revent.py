@@ -4,10 +4,10 @@ try:
 except ImportError:
     import pickle
 
-from RadioAnalysis.framework.event import BaseEvent
-from RadioAnalysis.framework.parameters import stationParameters as stp
-from RadioAnalysis.framework.parameters import showerParameters as shp
-from RadioAnalysis.framework.parameters import eventParameters as evp
+from radiominimalysis.framework.event import BaseEvent
+from radiominimalysis.framework.parameters import stationParameters as stp
+from radiominimalysis.framework.parameters import showerParameters as shp
+from radiominimalysis.framework.parameters import eventParameters as evp
 from radiotools import coordinatesystems as cs
 from radiotools import helper as rdhelp
 from radiotools.atmosphere import models as atm

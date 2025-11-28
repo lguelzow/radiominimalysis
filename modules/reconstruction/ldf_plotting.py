@@ -13,16 +13,16 @@ from scipy.interpolate import griddata
 from radiotools import coordinatesystems as cs
 from radiotools import helper as hp
 
-from RadioAnalysis.modules.reconstruction import signal_emissions as se
-from RadioAnalysis.modules.reconstruction.ldf_fit_functions import (
+from radiominimalysis.modules.reconstruction import signal_emissions as se
+from radiominimalysis.modules.reconstruction.ldf_fit_functions import (
     ldf_geo_param,
     vary_core_and_get_early_late_factor,
 )
-from RadioAnalysis.utilities import geomagnetic_emission, ldfs, early_late
+from radiominimalysis.utilities import geomagnetic_emission, ldfs, early_late
 
 from PWF_reconstruction.utils import create_times, chi2_PWF, mean
 
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
     stationParameters as stp,
@@ -57,8 +57,8 @@ def plot_f_gaus_sigmoid(
     
     if 0:
         
-        # np.savez_compressed(f"/cr/users/guelzow/simulations/radioanalysis/ldf_eval/50_200_ldf", rmodel, dtot)
-        low_ldf_file = np.load('/cr/users/guelzow/simulations/radioanalysis/ldf_eval/30_80_ldf.npz')
+        # np.savez_compressed(f"/cr/users/guelzow/simulations/radiominimalysis/ldf_eval/50_200_ldf", rmodel, dtot)
+        low_ldf_file = np.load('/cr/users/guelzow/simulations/radiominimalysis/ldf_eval/30_80_ldf.npz')
         r_data = low_ldf_file['arr_0']
         f_data = low_ldf_file['arr_1']
         
@@ -603,7 +603,7 @@ def plot_ldf(
                 label=r"$f_{\,\mathrm{geo}}^{\,\mathrm{par}}$"
             )
             
-            # np.savez_compressed(f"/cr/users/guelzow/simulations/radioanalysis/ldf_eval/50_200_ldf", r[neg_mask], fgeo[neg_mask])
+            # np.savez_compressed(f"/cr/users/guelzow/simulations/radiominimalysis/ldf_eval/50_200_ldf", r[neg_mask], fgeo[neg_mask])
 
             # repeat for cut stations
             if 0: #(f_vxB_noisy.any() != None):

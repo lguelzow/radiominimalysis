@@ -1,8 +1,8 @@
 import warnings
-from RadioAnalysis.framework.parameters import stationParameters as stp, showerParameters as shp, \
+from radiominimalysis.framework.parameters import stationParameters as stp, showerParameters as shp, \
     eventParameters as evp
-from RadioAnalysis.utilities.early_late import early_late_correction_factor, get_early_late_correction_factor
-from RadioAnalysis.utilities import refractive_displacement, cherenkov_radius
+from radiominimalysis.utilities.early_late import early_late_correction_factor, get_early_late_correction_factor
+from radiominimalysis.utilities import refractive_displacement, cherenkov_radius
 
 import radiotools.atmosphere.models as atm
 from radiotools import helper as rdhelp

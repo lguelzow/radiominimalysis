@@ -9,9 +9,9 @@ except ImportError:
 
 import sys
 
-# Import modules from the `RadioAnalysis` package
-from RadioAnalysis.framework import parameter_serialization, parameters
-from RadioAnalysis.framework.parameter_storage import ParameterStorage
+# Import modules from the `radiominimalysis` package
+from radiominimalysis.framework import parameter_serialization, parameters
+from radiominimalysis.framework.parameter_storage import ParameterStorage
 
 import logging
 logger = logging.getLogger('Shower')

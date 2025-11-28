@@ -5,7 +5,7 @@ import numpy as np
 import sys
 import logging
 import collections
-from RadioAnalysis.framework.parameters import stationParameters
+from radiominimalysis.framework.parameters import stationParameters
 logger = logging.getLogger('ParameterStorage')
 
 class ParameterStorage(object):

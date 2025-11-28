@@ -5,14 +5,14 @@ import lmfit
 import numpy as np
 from radiotools.atmosphere import models as atm
 
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
     stationParameters as stp,
 )
 
-from RadioAnalysis.modules.reconstruction import signal_emissions as se
-from RadioAnalysis.utilities import charge_excess, cherenkov_radius, early_late, geomagnetic_emission
+from radiominimalysis.modules.reconstruction import signal_emissions as se
+from radiominimalysis.utilities import charge_excess, cherenkov_radius, early_late, geomagnetic_emission
 
 
 def vary_core_and_get_early_late_factor(

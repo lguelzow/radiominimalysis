@@ -1,12 +1,12 @@
-import RadioAnalysis.framework.revent
-import RadioAnalysis.framework.shower
-from RadioAnalysis.framework.parameters import showerParameters as shp
-from RadioAnalysis.framework.parameters import stationParameters as stp
-from RadioAnalysis.framework.parameters import eventParameters as evp
+import radiominimalysis.framework.revent
+import radiominimalysis.framework.shower
+from radiominimalysis.framework.parameters import showerParameters as shp
+from radiominimalysis.framework.parameters import stationParameters as stp
+from radiominimalysis.framework.parameters import eventParameters as evp
 
 from RadioAnalysis.input_output.VocToEfield import efield_reconstruction_from_ADC as efield_recon
 
-from RadioAnalysis.modules.reconstruction import geometry
+from radiominimalysis.modules.reconstruction import geometry
 
 from radiotools import helper as rdhelp, coordinatesystems
 

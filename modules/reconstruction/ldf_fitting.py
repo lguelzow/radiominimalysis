@@ -11,26 +11,26 @@ from radiotools.atmosphere import models as atm
 from radiotools import helper
 from radiotools import helper as rdhelp, coordinatesystems
 
-from RadioAnalysis.framework.parameters import (
+from radiominimalysis.framework.parameters import (
     eventParameters as evp,
     showerParameters as shp,
     stationParameters as stp,
 )
-from RadioAnalysis.modules.reconstruction import signal_emissions as se
-from RadioAnalysis.modules.reconstruction.iminuit_wrapper import MyMinuitMinimizer
-from RadioAnalysis.modules.reconstruction.ldf_fit_functions import (
+from radiominimalysis.modules.reconstruction import signal_emissions as se
+from radiominimalysis.modules.reconstruction.iminuit_wrapper import MyMinuitMinimizer
+from radiominimalysis.modules.reconstruction.ldf_fit_functions import (
     objectiv_ldf_has_param,
     objective_ldf_geo_pos,
 )
-from RadioAnalysis.modules.reconstruction.cherenkov_geometry import fit_cherenkov_ring_to_footprint_revent
-from RadioAnalysis.modules.reconstruction.ldf_plotting import plot_ldf
-from RadioAnalysis.utilities import (
+from radiominimalysis.modules.reconstruction.cherenkov_geometry import fit_cherenkov_ring_to_footprint_revent
+from radiominimalysis.modules.reconstruction.ldf_plotting import plot_ldf
+from radiominimalysis.utilities import (
     cherenkov_radius,
     early_late,
     ldfs,
     refractive_displacement,
 )
-from RadioAnalysis.utilities import helpers, energyreconstruction
+from radiominimalysis.utilities import helpers, energyreconstruction
 
 at_model_for_avg = None
 

@@ -1,5 +1,5 @@
-from RadioAnalysis.modules.reconstruction import ldf_fitting
-from RadioAnalysis.utilities import geomagnetic_emission
+from radiominimalysis.modules.reconstruction import ldf_fitting
+from radiominimalysis.utilities import geomagnetic_emission
 import numpy as np
 
 from scipy import integrate
