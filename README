@@ -9,12 +9,15 @@ Some pip modules needed (install with pip --user install <module>):
 
 - iminuit, lmfit, scipy, numpy, matplotlib, ray
 
-External packages needed: 
+External packages needed for full usage of reconstuction: 
 
  - radiotools (https://github.com/nu-radio/radiotools.git)
  - GRANDlib (for any interactions with simulations processed by GRAND or measurement data)
+    (https://github.com/grand-mother/grand.git "dev" branch [status: 28.11.2025])
  - electric field reconstruction (for realistic ADC trace simulations and measurement data)
+    (https://github.com/grand-mother/E-Field-reconstruction-preliminary for a method from Kewen Zhang, modified by Lukas Gülzow)
  - PWF_reconstruction (for reconstruction of arrival direction)
+    (https://github.com/arsenefer/PWF_reconstruction.git)
 
 Clone them (with "git clone") and add them to your PYTHONPATH enviourmental variable
 
