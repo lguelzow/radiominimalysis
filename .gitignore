@@ -9,7 +9,6 @@ __pycache__
 *.pdf
 *.gif
 *.pickle
-*.sh
 *.npz
 *.csv
 *.txt
