@@ -5,7 +5,7 @@ from radiominimalysis.framework import factory
 from radiominimalysis.input_output import coreas_reader
 from radiominimalysis.framework.parameters import showerParameters as shp, eventParameters as evp, \
     stationParameters as stp
-from radiominimalysis.modules.CoREASanalysis import charge_excess_parametrization, charge_excess_validation, gauss_sigmoid_param, ldf_evaluation
+from radiominimalysis.modules.method_evaluation import charge_excess_parametrization, charge_excess_validation, gauss_sigmoid_param, ldf_evaluation
 
 from radiominimalysis.utilities import cherenkov_radius, charge_excess as ce
 from radiominimalysis.utilities import helpers as rdutils

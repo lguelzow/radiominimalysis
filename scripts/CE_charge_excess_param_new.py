@@ -8,7 +8,7 @@ from radiominimalysis.utilities import cherenkov_radius
 
 from radiominimalysis.input_output import coreas_reader
 
-from radiominimalysis.modules.CoREASanalysis import pyplots, pyplots_utils
+from radiominimalysis.modules.method_evaluation import pyplots, pyplots_utils
 from radiominimalysis.modules.reconstruction import geometry, signal_emissions
 
 from radiotools import helper as rdhelp

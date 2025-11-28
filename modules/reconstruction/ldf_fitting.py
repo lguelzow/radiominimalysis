@@ -22,7 +22,6 @@ from radiominimalysis.modules.reconstruction.ldf_fit_functions import (
     objectiv_ldf_has_param,
     objective_ldf_geo_pos,
 )
-from radiominimalysis.modules.reconstruction.cherenkov_geometry import fit_cherenkov_ring_to_footprint_revent
 from radiominimalysis.modules.reconstruction.ldf_plotting import plot_ldf
 from radiominimalysis.utilities import (
     cherenkov_radius,

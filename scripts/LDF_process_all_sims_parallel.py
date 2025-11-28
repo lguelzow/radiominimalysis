@@ -9,8 +9,8 @@ from radiominimalysis.modules.reconstruction import (
 )
 from radiominimalysis.utilities import parsers, energyreconstruction
 
-from radiominimalysis.modules.CoREASanalysis import ldf_evaluation as LDF_eval
-from radiominimalysis.modules.CoREASanalysis.gauss_sigmoid_param import (
+from radiominimalysis.modules.method_evaluation import ldf_evaluation as LDF_eval
+from radiominimalysis.modules.method_evaluation.gauss_sigmoid_param import (
     evaluate_gauss_sigmoid_pars as GS_param
 )
 

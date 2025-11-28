@@ -3,15 +3,15 @@ import argparse
 import numpy as np
 
 # from radiominimalysis.input_output import coreas_reader
-from radiominimalysis.modules.CoREASanalysis.gauss_sigmoid_param import (
+from radiominimalysis.modules.method_evaluation.gauss_sigmoid_param import (
     evaluate_gauss_sigmoid_pars as GS_param
 )
-from radiominimalysis.modules.CoREASanalysis import ldf_evaluation as LDF_eval
+from radiominimalysis.modules.method_evaluation import ldf_evaluation as LDF_eval
 from radiominimalysis.modules.reconstruction import geometry
 from radiominimalysis.modules.reconstruction import signal_emissions
 # from radiominimalysis.modules.reconstruction import RAY_parallel_functions
 
-from radiominimalysis.modules.ADSTanalysis import efficiency as eff
+# from radiominimalysis.modules.ADSTanalysis import efficiency as eff
 
 from matplotlib import pyplot as plt
 
