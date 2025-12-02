@@ -186,54 +186,12 @@ def read_measurement_data_from_root(filename, event_and_run, origin=False, plot_
 
     print("Extracted measurement data. Processing...")
     
-    antenna_times = antenna_s - min(antenna_s)
-
-    antenna_times =  antenna_s + (antennas_ns)
     # reconstruct arrival direction
-    print(antennas_from_data, antenna_times)
-    zenith_rec, azimuth_rec = np.rad2deg(PWF_semianalytical(antennas_from_data, antenna_times))
+    zenith_rec, azimuth_rec = np.rad2deg(PWF_semianalytical(antennas_from_data, arrival_times))
     print("1. Rec. Arrival Direction", np.round(zenith_rec, 2), np.round(azimuth_rec, 2))
 
 
-    # plot the antenna positions from file and from data
-    fig, ax = plt.subplots(1, 1)
-    ax.scatter(antennas_from_data[:, 1], antennas_from_data[:, 0], marker='o', color='black', label='du_event')
-    for i, txt in enumerate(ids_from_data):
-        ax.annotate(int(txt), (antennas_from_data[i, 1], antennas_from_data[i, 0]))
-
-    ax.scatter(np.mean(antennas_from_data[:, 1]), np.mean(antennas_from_data[:, 0]), marker='x', color='red', label='barycenter/estimated core')
-
-    ax.set_xlabel("Easting [m]") # Longitude [°]")
-    ax.set_ylabel("Northing [m]") # Latitude [°]")
-    ax.axis('equal')
-    ax.axis('equal')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("event_layout.png")
-    plt.close()
-
-
-    if 0: 
-        # plot the antenna positions from file and from data
-        fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-        ax[0].scatter(-antenna_positions_xyz[:, 1], antenna_positions_xyz[:, 0], marker='x', color='black', label='du_xyz')
-        for i, txt in enumerate(antenna_ids):
-            ax[0].annotate(int(txt), (-antenna_positions_xyz[i, 1], antenna_positions_xyz[i, 0]))
-
-        ax[1].scatter(antenna_positions_geodetic[:, 1], antenna_positions_geodetic[:, 0], marker='v', color='red', label='du_geoid')
-        for i, txt in enumerate(antenna_ids):
-            ax[1].annotate(int(txt), (antenna_positions_geodetic[i, 1], antenna_positions_geodetic[i, 0]))
-
-        ax[0].set_xlabel("Easting [m]") # Longitude [°]")
-        ax[0].set_ylabel("Northing [m]") # Latitude [°]")
-        ax[1].set_xlabel("Longitude [°]")
-        ax[1].set_ylabel("Latitude [°]")
-        ax[0].axis('equal')
-        ax[1].axis('equal')
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig("gp65_compare.png")
-        plt.close()
+    if plot_adc_traces:
 
         # plot ADC traces
         fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(30, 10))
@@ -254,16 +212,30 @@ def read_measurement_data_from_root(filename, event_and_run, origin=False, plot_
 
 
     # return all data relevant to reconstruction
-    return adc_traces, antennas_from_data, ids_from_data, antenna_s, antennas_ns
+    return adc_traces, antennas_from_data, ids_from_data, arrival_times
 
 
 
-def read_measurement_data_from_root_directory(filename):
-    '''
-    filename: path to GRAND .root measurement data file
-
-    event_and_run: event and run number of event to be read, tuple like, e.g. (2, 4506)
-    '''
+def read_measurement_data_from_root_directory(filename, origin=False, plot_adc_traces=False):
+    """
+    Read out event data from larger ROOT file, containing many events
+    
+    :param filename: path to measurement data file
+    :param event_and_run: run & event nr of desired event
+    :param origin: coordinate origin
+    :param plot_adc_traces: Want to plot ADC traces?
+    
+    returns: adc_traces --- analogue-to-digital converter traces from measurement
+             antennas_from_data --- cartesian positions of antennas
+             ids_from_data --- antenna IDS
+             arrival_times --- time of measurement at each antenna [ns]
+             
+    """
+    
+    if origin:
+        origin_geoid = origin
+    else:
+        origin_geoid = Geodetic(latitude=40.99434, longitude=93.94177, height=1262)
 
     # initialise datafile class from grandlib
     d_input = groot.DataDirectory(filename)
@@ -316,7 +288,6 @@ def read_measurement_data_from_root_directory(filename):
         event_ids = np.array(ev.du_id)
 
         # get antenna arrival times
-        # TODO: find out why it sometimes works with or without the seconds
         event_antenna_s = np.array(ev.du_seconds) 
         event_antennas_ns = np.array(ev.du_nanoseconds)
 
@@ -342,45 +313,7 @@ def read_measurement_data_from_root_directory(filename):
         ids_from_data.append(event_ids)
         arrival_times.append(antenna_times)
 
-        if 0: 
-            # plot the antenna positions from file and from data
-            fig, ax = plt.subplots(1, 1)
-            ax.scatter(event_antennas[:, 1], event_antennas[:, 0], marker='o', color='black', label='du_event')
-            for i, txt in enumerate(event_ids):
-                ax.annotate(int(txt), (event_antennas[i, 1], event_antennas[i, 0]))
-
-            ax.scatter(np.mean(event_antennas[:, 1]), np.mean(event_antennas[:, 0]), marker='x', color='red', label='barycenter/estimated core')
-
-            ax.set_xlabel("Easting [m]") # Longitude [°]")
-            ax.set_ylabel("Northing [m]") # Latitude [°]")
-            ax.axis('equal')
-            ax.axis('equal')
-            plt.legend()
-            plt.tight_layout()
-            plt.savefig("event_layout.png")
-            plt.close()
-
-            # plot the antenna positions from file and from data
-            fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-            ax[0].scatter(-antenna_positions_xyz[:, 1], antenna_positions_xyz[:, 0], marker='x', color='black', label='du_xyz')
-            for i, txt in enumerate(antenna_ids):
-                ax[0].annotate(int(txt), (-antenna_positions_xyz[i, 1], antenna_positions_xyz[i, 0]))
-
-            ax[1].scatter(antenna_positions_geodetic[:, 1], antenna_positions_geodetic[:, 0], marker='v', color='red', label='du_geoid')
-            for i, txt in enumerate(antenna_ids):
-                ax[1].annotate(int(txt), (antenna_positions_geodetic[i, 1], antenna_positions_geodetic[i, 0]))
-
-            ax[0].set_xlabel("Easting [m]") # Longitude [°]")
-            ax[0].set_ylabel("Northing [m]") # Latitude [°]")
-            ax[1].set_xlabel("Longitude [°]")
-            ax[1].set_ylabel("Latitude [°]")
-            ax[0].axis('equal')
-            ax[1].axis('equal')
-            plt.legend()
-            plt.tight_layout()
-            plt.savefig("gp65_compare.png")
-            plt.close()
-
+        if plot_adc_traces: 
             # plot ADC traces
             fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(30, 10))
             ax[0].plot(range(len(trace_ADC[2][0])), trace_ADC[2][1], c="blue", label="Ch1")
@@ -401,12 +334,3 @@ def read_measurement_data_from_root_directory(filename):
 
     # return all data relevant to reconstruction
     return adc_traces, antennas_from_data, ids_from_data, arrival_times, events_list
-
-
-    
-
-filename = "/cr/aera02/huege/guelzow/gp80_data/sps/grand/data/gp80/GrandRoot/2025/02/GP80_20250219_010150_RUN9966_CD_ChanXYZ-20dB-GP80-43DUs-X2X-Y2Y-dunhuangTest-UDRUN147-t3offlineVersion1p5-20250218-174914-1000-0001.root"
-# filename = "/cr/aera02/huege/guelzow/gp80_data/sps/grand/data/gp80/GrandRoot/2025/02/GP80_20250204_045218_RUN9322_CD_ChanXYZ-20dB-GP80-43DUs-X2X-Y2Y-dunhuangTest-UDRUN144-t3offlineVersion1p5-20250204-043102-1000-0001.root"
-event_and_run = (26, 9966)
-
-# read_measurement_data_from_root(filename, event_and_run)
