@@ -216,7 +216,7 @@ def read_root_file(input_directories, args=None):
                 run_number = 10070
                 
                 # call function which reads measurement data and returns it as np.array
-                adc_traces, antennas_triggered, antenna_IDs, antenna_s, antenna_ns = grand_data_reader.read_measurement_data_from_root(filename=input_file, event_and_run=(event_number, run_number))
+                adc_traces, antennas_triggered, antenna_IDs, arrival_times = grand_data_reader.read_measurement_data_from_root(filename=input_file, event_and_run=(event_number, run_number))
 
                 # put in list so it works with the for loop
                 adc_traces = [adc_traces]
