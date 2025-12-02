@@ -40,86 +40,72 @@ from datetime import timedelta
 import argparse
 
 
-# parser = argparse.ArgumentParser(description="")
+def get_antenna_pos_from_GPS(antenna_file=False, origin=False, cart_file=False):
+    """
+    use data file with geodetic/GPS antenna positions to generate cartesian antenna positions for specified origin
+    
+    :param antenna_file: path to antenna file
+    .param origin: coordinate system origin in GPS coordinates
+    :param cart_file: generate text file with positions and IDs?
+    
+    returns: antenna positions as an array 
+             antenna IDs
+    """
 
-# # parser asks for hdf5 input files to plot results from
-# parser.add_argument(
-#     "paths",
-#     metavar="PATH",
-#     type=str,
-#     nargs="*",
-#     default=[],
-#     help="Choose hdf5 input file(s).",
-# )
+    # read data from antenna file
+    if file:
+        file = antenna_file
+    else:
+        file = np.genfromtxt("/cr/users/guelzow/simulations/antenna_layouts/antennas_gp65_full_GPS.txt", dtype = "str")
+        # file = np.genfromtxt("/cr/users/guelzow/simulations/antenna_layouts/list_antennas_GP41_GPS.txt", dtype = "str")
 
-# read arguments from the command line after the function itself
-# args = parser.parse_args()
+    # put antenna positions in [latitude, longitude, height] and antenna IDs in arrays
+    antenna_positions_geodetic = np.array([[file[i, 2].astype(float), file[i, 1].astype(float), file[i, 3].astype(float)] for i in range(len(file))])
+    antenna_ids = np.array([file[i, 0].astype(float) for i in range(len(file))])
 
+    # define origin in same system
+    if origin:
+        origin_geoid = origin
+    else:
+        # DAQ room origin
+        origin_geoid = Geodetic(latitude=40.99434, longitude=93.94177, height=1262)  
 
-# plt.rcParams.update({'font.size': 15})
+    # transforms antennas to cartesian coordinates in array reference frame
+    antenna_positions_xyz = np.array([GRANDCS(arg=Geodetic(latitude=pos[0], longitude=pos[1], height=pos[2]), obstime="2024-01-01", location=origin_geoid) \
+                                    for pos in antenna_positions_geodetic])
 
-# read data from antenna file
-file = np.genfromtxt("/cr/users/guelzow/simulations/antenna_layouts/antennas_gp65_full_GPS.txt", dtype = "str")
-# file = np.genfromtxt("/cr/users/guelzow/simulations/antenna_layouts/list_antennas_GP41_GPS.txt", dtype = "str")
+    # convert to standard array format
+    antennas_xyz = np.array([[antenna_positions_xyz[i, 0, 0], antenna_positions_xyz[i, 1, 0], antenna_positions_xyz[i, 2, 0]] for i in range(len(antenna_positions_xyz))])
 
-# put antenna positions in [latitude, longitude, height] and antenna IDs in arrays
-antenna_positions_geodetic = np.array([[file[i, 2].astype(float), file[i, 1].astype(float), file[i, 3].astype(float)] for i in range(len(file))])
-antenna_ids = np.array([file[i, 0].astype(float) for i in range(len(file))])
+    # generate .txt of the antenna positions with IDs
+    if cart_file:
+        with open("cartesia_antenna_pos.txt", "w") as txt_file:
+            for i in range(len(antennas_xyz)):
+                txt_file.write(str(int(antenna_ids[i])) + " " + str(antennas_xyz[i, 0]) + " " + str(antennas_xyz[i, 1]) + " " + str(antennas_xyz[i, 2]) + "\n")
+                
+    return antennas_xyz, antenna_ids
+    
+    
 
-# define origin in same system
-# origin_geoid = Geodetic(latitude=trun.origin_geoid[0], longitude=trun.origin_geoid[1], height=trun.origin_geoid[2])
-# origin_geoid = Geodetic(latitude=40.98455810546875, longitude=93.9522476196289, height=1242)
-# DAQ room origin
-origin_geoid = Geodetic(latitude=40.99434, longitude=93.94177, height=1262)
-
-# set global GRAND reference frame
-array_reference_frame = GRANDCS(arg=origin_geoid, obstime="2024-01-01", location=origin_geoid)       
-
-# transforms antennas to cartesian coordinates in array reference frame
-antenna_positions_xyz = np.array([GRANDCS(arg=Geodetic(latitude=pos[0], longitude=pos[1], height=pos[2]), obstime="2024-01-01", location=origin_geoid) \
-                                  for pos in antenna_positions_geodetic])
-
-antennas_xyz = np.array([[antenna_positions_xyz[i, 0, 0], antenna_positions_xyz[i, 1, 0], antenna_positions_xyz[i, 2, 0]] for i in range(len(antenna_positions_xyz))])
-
-# with open("50_antennas.txt", "w") as txt_file:
-#     for i in range(len(antennas_xyz)):
-#         txt_file.write(str(int(antenna_ids[i])) + " " + str(antennas_xyz[i, 0]) + " " + str(antennas_xyz[i, 1]) + " " + str(antennas_xyz[i, 2]) + "\n")
-
-
-def plot_ADC_traces(filename, event_and_run):
-
-    # initialise datafile class from grandlib
-    d_input = groot.DataFile(filename)
-
-    # print contents of file
-    # d_input.print()
-
-    # load adc and run info trees
-    tadc = d_input.tadc
-    trun = d_input.trun
-    trawvoltage = d_input.trawvoltage
-
-    #get the list of events
-    events_list = tadc.get_list_of_events()
-    nb_events = len(events_list)
-    print("Number of events in file: ", nb_events)
-
-    # load data of specific event
-    tadc.get_event(event_and_run[0], event_and_run[1])
-    trun.get_run(event_and_run[1])
-    trawvoltage.get_event(event_and_run[0], event_and_run[1])
-    print(event_and_run)
-
-    # get ADC traces
-    trace_ADC = np.asarray(tadc.trace_ch, dtype=np.float32)
-
-
-def read_measurement_data_from_root(filename, event_and_run):
-    '''
-    filename: path to GRAND .root measurement data file
-
-    event_and_run: event and run number of event to be read, tuple like, e.g. (2, 4506)
-    '''
+def read_measurement_data_from_root(filename, event_and_run, origin=False, plot_adc_traces=False):
+    """
+    Read out event data from a single event in a file
+    
+    :param filename: path to measurement data file
+    :param event_and_run: run & event nr of desired event
+    :param origin: coordinate origin
+    :param plot_adc_traces: Want to plot ADC traces?
+    
+    returns: adc_traces --- analogue-to-digital converter traces from measurement
+             antennas_from_data --- cartesian positions of antennas
+             ids_from_data --- antenna IDS
+             arrival_times --- time of measurement at each antenna [ns]
+    """
+    
+    if origin:
+        origin_geoid = origin
+    else:
+        origin_geoid = Geodetic(latitude=40.99434, longitude=93.94177, height=1262)
 
     # initialise datafile class from grandlib
     d_input = groot.DataFile(filename)
@@ -154,7 +140,6 @@ def read_measurement_data_from_root(filename, event_and_run):
     # transforms antennas to cartesian coordinates in array reference frame
     antennas = np.array([GRANDCS(arg=Geodetic(latitude=du_lat[i], longitude=du_long[i], height=du_alt[i]), obstime="2024-01-01", location=origin_geoid) 
                                       for i in range(len(du_lat))])
-    0451
     
     # antenna positions extracted from file with obs level added
     antennas_from_data = np.array([[antennas[i, 0, 0], antennas[i, 1, 0], antennas[i, 2, 0]] for i in range(len(antennas))])
