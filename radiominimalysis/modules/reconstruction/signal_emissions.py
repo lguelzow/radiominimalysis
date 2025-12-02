@@ -1,21 +1,8 @@
 from radiominimalysis.framework.parameters import stationParameters as stp, showerParameters as shp
 from radiominimalysis.utilities import charge_excess as ce, geomagnetic_emission, cherenkov_radius as che
 
-from radiominimalysis.utilities import helpers
-from radiotools import helper as rdhelp
-
 import sys
 import numpy as np
-from scipy import interpolate
-import warnings
-import functools
-
-try:
-    from interpolation_Fourier import interp2d_fourier
-    imported_fourier = True
-except ImportError as e:
-    print(e)
-    imported_fourier = False
 
 
 def find_maximum_in_footprints(events, para):
@@ -191,112 +178,6 @@ def seperate_radio_emission_with_rotational_symmetry(position_vBvvB, energy_flue
     f_ce = f_ce_vxB + f_ce_vxvxB
 
     return f_geo, f_ce
-
-
-# when used in fitting with fixed core the declorater might speed up the process
-# @functools.lru_cache(maxsize=16)
-def seperate_radio_emission_from_position(
-                position_vBvvB, energy_fluence_vector, c_early_late=None,
-                recover_vxB=True, set_vxB_to_value=np.nan, get_only_f_geo=False, fitted_core=False, revent=None):
-    """
-    This function returns the emission from the geomagnetic (f_geo) and charge excess (f_ce) emission for given
-    observer. Keep in might that the calculation failes for station on or close th the vxB axis -> ~ 1/0.
-    You can set those values to a fixed value with "set_vxB_to_value". You recalculate then with another function with
-    recover_vxB = True (is default). Therefore you need the early late correction factor. if they are not given 1 is used.
-    to save time you can just compute the geomagnetic component with get_only_f_geo = True.
-    """
-
-    # angle between observer and positive vxB axis
-    phi = rdhelp.get_normalized_angle(np.arctan2(position_vBvvB[:, 1], position_vBvvB[:, 0]))
-
-    if fitted_core:
-        # when fitting core, the stations are close but not on the vxB
-        # station close to the vxB axis have to be treating differently
-        #arccos(0.99) ~ 8 deg -> 1/sin(phi) ~ 10
-        #arccos(0.95) ~ 18 deg
-
-        ## This was used for icrc21
-        # vxB_pos = np.cos(phi) > 0.9
-        # vxB_neg = np.cos(phi) < -0.9
-
-        vxB_pos = np.cos(phi) > 0.9961946980917455  # cos(5deg)
-        vxB_neg = np.cos(phi) < -0.9961946980917455  # cos(5deg)
-
-        vxB_axis = np.any([vxB_pos, vxB_neg], axis=0)
-        # print(vxB_axis)
-    else:
-        vxB_axis = helpers.mask_polar_angle(
-            phi, angles_in_deg=[0, 180], atol_in_deg=1)
-        vxB_pos = helpers.mask_polar_angle(
-            phi, angles_in_deg=0, atol_in_deg=1)
-        vxB_neg = helpers.mask_polar_angle(
-            phi, angles_in_deg=180, atol_in_deg=1)
-            
-    if revent is not None:
-        print(revent)
-        shower = revent.get_shower()
-        cs = revent.get_coordinate_transformation()
-        pos_vB_orig = cs.transform_to_vxB_vxvxB(revent.get_station_parameter(stp.position),
-                core=np.array([0, 0, shower.get_parameter(shp.observation_level)]))
-        angles = np.around(np.rad2deg(rdhelp.get_normalized_angle(np.arctan2(pos_vB_orig[:, 1], pos_vB_orig[:, 0]))), 1)
-        angles[angles >= 360] -= 360
-
-        print(np.cos(phi)[angles == 45])
-        print(np.cos(phi)[angles == 225])
-
-    f_vxB = energy_fluence_vector[:, 0]
-    f_vxvxB = energy_fluence_vector[:, 1]
-
-    f_geo_pos = np.full_like(f_vxB, set_vxB_to_value)
-    f_geo_pos[~vxB_axis] = np.square(np.sqrt(f_vxB[~vxB_axis]) - (np.cos(phi[~vxB_axis]) / np.abs(np.sin(phi[~vxB_axis]))) * np.sqrt(f_vxvxB[~vxB_axis]))
-
-    if not get_only_f_geo:
-        f_ce_pos = np.full_like(f_vxB, set_vxB_to_value)
-        f_ce_pos[~vxB_axis] = 1 / np.sin(phi[~vxB_axis]) ** 2 * f_vxvxB[~vxB_axis]
-
-    if recover_vxB:
-        if c_early_late is None:
-            warnings.warn("Seperating emissions on vxB axis with out early late correction.")
-            c_early_late = np.ones(f_geo_pos.shape)
-
-        # early late correction
-        r_axis = np.sqrt(position_vBvvB[:, 0] ** 2 + position_vBvvB[:, 1] ** 2) / c_early_late
-        f_vxB = f_vxB * c_early_late ** 2
-
-        # seperate positive and negative axis
-        r_pos, r_neg = r_axis[vxB_pos], r_axis[vxB_neg]
-
-        # # to avoid that stations getting to close to each other when fitting the core
-        # r_pos_u, idx_pos = np.unique(np.around(r_pos, -1), return_index=True)
-        # r_neg_u, idx_neg = np.unique(np.around(r_neg, -1), return_index=True)
-        # # f_vxB[vxB_pos][idx_pos], f_vxB[vxB_neg][idx_neg]
-
-        # interpolation is needed because of early late correction the true axis distance are not equal
-        # if x_new is out of bound (will happen) than f_vxB of the clostest station for the lower bound and 0 for the upper bounds is used
-        f_vxB_pos = interpolate.interp1d(r_pos, f_vxB[vxB_pos], bounds_error=False, fill_value=(f_vxB[np.argmin(r_axis)], 0), kind='quadratic')
-        f_vxB_neg = interpolate.interp1d(r_neg, f_vxB[vxB_neg], bounds_error=False, fill_value=(f_vxB[np.argmin(r_axis)], 0), kind='quadratic')
-
-        # reverse early late correction (since is not for the other axis yet)
-        f_geo_pos[vxB_pos] = ce.f_geo_on_vxB(f_vxB_pos(r_pos), f_vxB_neg(r_pos)) / c_early_late[vxB_pos] ** 2
-        f_geo_pos[vxB_neg] = ce.f_geo_on_vxB(f_vxB_pos(r_neg), f_vxB_neg(r_neg)) / c_early_late[vxB_neg] ** 2
-
-        if not get_only_f_geo:
-            f_ce_pos[vxB_pos] = ce.f_ce_on_vxB(f_vxB_pos(r_pos), f_vxB_neg(r_pos)) / c_early_late[vxB_pos] ** 2
-            f_ce_pos[vxB_neg] = ce.f_ce_on_vxB(f_vxB_pos(r_neg), f_vxB_neg(r_neg)) / c_early_late[vxB_neg] ** 2
-
-        if revent is not None:
-            from matplotlib import pyplot as plt
-            plt.plot(r_pos, f_vxB[vxB_pos], 'C0o')
-            plt.plot(r_pos, f_vxB_neg(r_pos), 'C1s')
-            plt.plot(r_neg, f_vxB[vxB_neg], 'C1o')
-            plt.plot(r_neg, f_vxB_pos(r_neg), 'C0s')
-            # plt.show()
-
-
-    if not get_only_f_geo:
-        return f_geo_pos, f_ce_pos
-    else:
-        return f_geo_pos
 
 
 def reconstruct_geomagnetic_and_charge_excess_emission_from_position(events, para):

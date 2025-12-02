@@ -2,13 +2,12 @@ import copy
 import functools
 import re
 import sys
+import warnings
 
 import lmfit
 import numpy as np
 import ray
-from matplotlib import pyplot as plt
 from radiotools.atmosphere import models as atm
-from radiotools import helper
 from radiotools import helper as rdhelp, coordinatesystems
 
 from radiominimalysis.framework.parameters import (
@@ -29,7 +28,7 @@ from radiominimalysis.utilities import (
     ldfs,
     refractive_displacement,
 )
-from radiominimalysis.utilities import helpers, energyreconstruction
+from radiominimalysis.utilities import energyreconstruction
 
 at_model_for_avg = None
 
@@ -47,6 +46,19 @@ def get_average_distance_to_xmax(zenith, observation_level, at_model, depth=750)
 # stupid fit
 def E_rad_geo_sinalpha(E_cr, A=26.86e6, B=1.989):
     return A * (E_cr / 1e18) ** B
+
+
+def convert_fit_result(fit_result):
+    # init_values is dictionary with var names
+    keys = ['nfev', 'nvarys', 'ndata', 'nfree', 'chisqr', 'redchi', 'init_values', 'success']
+    return_dict = {}
+    for key in keys:
+        try:
+            return_dict.update({key: fit_result.__dict__[key]})
+        except KeyError as e:
+            warning = 'could not copy % s' % key
+            warnings.warn(warning)
+    return return_dict
 
 
 def get_parameter_gaus_sigmoid(
@@ -514,484 +526,6 @@ def get_parameter_gaus_sigmoid(
     return params
 
 
-def get_selection_mask(
-    revent,
-    reject_vxB=False,
-    reject_thinning=False,
-    dist_lim=False,
-    select_stations=False,
-):
-    # select stations for fit
-
-    station_position_vBvvB = revent.get_station_position_vB_vvB()
-
-    if select_stations:
-        select_or_cleaned = np.array([False] * len(station_position_vBvvB))
-        indecies = helpers.get_index_for_random_stations(revent)
-        select_or_cleaned[indecies] = True
-    else:
-        select_or_cleaned = np.array([True] * len(station_position_vBvvB))
-
-    if reject_thinning:
-        thinning_clean_masks = revent.get_station_parameter(stp.cleaned_from_thinning)
-        select_or_cleaned = np.all([select_or_cleaned, thinning_clean_masks], axis=0)
-
-    if dist_lim:
-        r_che = refractive_displacement.get_cherenkov_radius_param_revent(revent)
-        zenith = revent.get_shower().get_parameter(shp.zenith)
-        num_rche = 4 if zenith < np.deg2rad(70) else 3
-        mask = np.all(
-            [
-                np.sqrt(np.sum(station_position_vBvvB[:, :-1] ** 2, axis=1))
-                < num_rche * r_che
-            ],
-            axis=0,
-        )
-        select_or_cleaned = np.all([select_or_cleaned, mask], axis=0)
-
-    if reject_vxB:
-        phi = revent.get_station_angle_to_vB()
-        vxB = helpers.mask_polar_angle(phi, angles_in_deg=[0, 180, 360], atol_in_deg=1)
-        if np.sum(vxB) != 60:
-            print("Waring, reject not 60 station because of vxB")
-        select_or_cleaned = np.all([select_or_cleaned, ~vxB], axis=0)
-
-    return select_or_cleaned
-
-
-def fit_pos_has_ldf_compare(events, para):
-
-    for revent in events:
-        shower = revent.get_shower()
-        if re.search("0000", "%06d" % revent.get_run_number()):
-            print(revent.get_run_number())
-
-        station_positions = revent.get_station_parameter(stp.position)
-        energy_fluence_vector = revent.get_station_parameter(stp.energy_fluence)
-        select_or_cleaned = get_selection_mask(revent)
-        core_gp = shower.get_parameter(shp.core)
-        zenith = shower.get_parameter(shp.zenith)
-
-        if core_gp[0] != 0:
-            sys.exit("core is already altered")
-
-        antenna_positions_core_cs = station_positions - core_gp
-        cs = revent.get_coordinate_transformation()
-        xdata = [
-            antenna_positions_core_cs[select_or_cleaned],
-            energy_fluence_vector[select_or_cleaned],
-            cs,
-        ]
-
-        atmodel = shower.get_parameter(shp.atmosphere_model)
-        obs_lvl = shower.get_parameter(shp.observation_level)
-        n0 = revent.get_parameter(evp.refractive_index_at_sea_level)
-
-        # set up data for minimization
-        fcn_kwargs1 = {
-            "xdata": xdata,
-            "f_geo_ldf": ldfs.f_E_geo_gaus_sigmoid,
-            "zenith": zenith,
-            "rel_weight": 0.02,
-            "add_abs_weight": 1e-4,
-            "observation_level": obs_lvl,
-            "atmodel": atmodel,
-            "n0": n0,
-            "do_sum": True,
-        }
-
-        # fcn_kwargs2 = {'xdata': xdata,
-        #             'f_geo_ldf': ldfs.f_E_geo_gaus_sigmoid_simple_p,
-        #             "zenith": zenith,
-        #             "rel_weight": 0.02,
-        #             "add_abs_weight": 1e-4,
-        #             "observation_level": obs_lvl,
-        #             "atmodel": atmodel, "n0": n0,
-        #             'do_sum': True}
-
-        params1 = get_parameter_gaus_sigmoid(
-            revent,
-            fit_dmax=False,
-            core_fit=True,
-            param_p=False,
-            param_r0=False,
-            take_avg=False,
-        )
-
-        params2 = params1
-        # params2["p"].set(value=1.8, min=1, max=2)
-
-        mym1 = MyMinuitMinimizer(
-            objective_ldf_geo_pos, params1, fcn_kwargs1, verbose=para.plot
-        )
-
-        # construct model
-        fcn_kwargs2 = copy.deepcopy(fcn_kwargs1)
-
-        fcn_kwargs2["do_sum"] = False
-        ldf_model = lmfit.Minimizer(
-            objective_ldf_geo_pos, params2, fcn_kws=fcn_kwargs2, nan_policy="omit"
-        )
-        result = ldf_model.minimize("least_squares")
-        pars2 = result.params.valuesdict()
-
-        # mym2 = MyMinuitMinimizer(objective_ldf_geo_pos,
-        #                          params2, fcn_kwargs2, verbose=para.plot)
-
-        mym1.migrad()
-        mym1.hesse()
-        # mym2.migrad()
-        # mym2.hesse()
-
-        pars1 = mym1.get_all_param_value_dict()
-        fig, axs = plot_ldf(
-            pars1,
-            fcn_kwargs1,
-            pos=True,
-            opt="return",
-            plot_gaus_kwargs={"color": "C2", "label": '"soft" p'},
-        ) # type: ignore
-
-        # pars2 = mym2.get_all_param_value_dict()
-        axs = plot_ldf(
-            pars2,
-            fcn_kwargs2,
-            pos=True,
-            opt="return",
-            axs=axs,
-            plot_gaus_kwargs={"color": "C1", "label": '"hard" p'},
-        )
-
-        axs[0].legend(ncol=2, loc="lower right")
-        plt.tight_layout()
-        plt.savefig("ldf_comp_%06d%s.png" % (revent.get_run_number(), para.label))
-
-    post_process_store(revent, mym1, select_or_cleaned)
-    post_process_store(revent, result, select_or_cleaned)
-
-
-def data_fitting_sequence(objective, params, fcn_kwargs, para):
-    # construct model
-    ldf_model = lmfit.Minimizer(
-        objective, params, fcn_kws=fcn_kwargs, nan_policy="omit"
-    )
-
-    try:
-        # minimization
-        # with default method error of changing array size is causing abort
-        result = ldf_model.minimize("least_squares")
-    except ValueError as e:
-        return None
-
-    if para.plot:
-        print(lmfit.fit_report(result))
-
-    # update parameter
-    params = result.params
-    params["distance_xmax_geometric"].set(vary=True)
-
-    # construct model
-    ldf_model = lmfit.Minimizer(
-        objective, params, fcn_kws=fcn_kwargs, nan_policy="omit"
-    )
-
-    try:
-        # minimization
-        # with default method error of changing array size is causing abort
-        result = ldf_model.minimize("least_squares")
-    except ValueError as e:
-        return None
-
-    if para.plot:
-        print(lmfit.fit_report(result))
-
-    # update parameter
-    params = result.params
-    params["distance_xmax_geometric"].set(vary=False)
-    params["core_x"].set(vary=True)
-    params["core_y"].set(vary=True)
-
-    # construct model
-    ldf_model = lmfit.Minimizer(
-        objective, params, fcn_kws=fcn_kwargs, nan_policy="omit"
-    )
-
-    try:
-        # minimization
-        # with default method error of changing array size is causing abort
-        result = ldf_model.minimize("least_squares")
-    except ValueError as e:
-        return None
-
-    if para.plot:
-        print(lmfit.fit_report(result))
-
-    # update parameter
-    params = result.params
-    params["distance_xmax_geometric"].set(vary=True)
-
-    # construct model
-    ldf_model = lmfit.Minimizer(
-        objective, params, fcn_kws=fcn_kwargs, nan_policy="omit"
-    )
-
-    try:
-        # minimization
-        # with default method error of changing array size is causing abort
-        result = ldf_model.minimize("least_squares")
-    except ValueError as e:
-        return None
-
-    return result
-
-
-def _fit_pos_has_ldf_E_geo(revent, para):
-
-    shower = revent.get_shower()
-    if re.search("00000", "%06d" % revent.get_run_number()):
-        print(revent.get_run_number())
-
-    station_positions = revent.get_station_parameter(stp.position)
-
-    if len(station_positions) < 5:
-        return 0
-
-    energy_fluence_vector = revent.get_station_parameter(stp.energy_fluence)
-
-    select_or_cleaned = get_selection_mask(revent, dist_lim=False, reject_vxB=False)
-
-    core_gp = shower.get_parameter(shp.core)
-    zenith = shower.get_parameter(shp.zenith)
-
-    atmodel = shower.get_parameter(shp.atmosphere_model)
-    obs_lvl = shower.get_parameter(shp.observation_level)
-    n0 = revent.get_parameter(evp.refractive_index_at_sea_level)
-
-    # if core_gp[0] != 0:
-    #     sys.exit("core is already altered")
-
-    antenna_positions_core_cs = station_positions - core_gp
-    cs = revent.get_coordinate_transformation()
-    xdata = [
-        antenna_positions_core_cs[select_or_cleaned],
-        energy_fluence_vector[select_or_cleaned],
-        cs,
-    ]
-
-    real = False
-    if 1:
-        p_soft = True
-
-        # parameters for free fit for 50-200 MHz
-        params = get_parameter_gaus_sigmoid(
-            revent,
-            fit_dmax=True,
-            core_fit=True,
-            take_core_pred=True,
-            use_rho=False,
-            offline_param=False,
-            site_param_Auger=True,
-            take_avg=False,
-            param_r0=True,
-            param_sig=False,
-            param_p=False,
-            param_arel=False,
-            param_r02=False,
-        )
-
-        if p_soft:
-            func = ldfs.f_E_geo_gaus_sigmoid
-        else:
-            func = ldfs.f_E_geo_gaus_sigmoid_simple_p
-    else:
-        params = get_parameter_pol3(revent)
-        func = ldfs.f_E_geo
-
-    # set up data for minimization
-    fcn_kwargs = {
-        "xdata": xdata,
-        "f_geo_ldf": func,
-        "zenith": zenith,
-        "rel_weight": 0.03,
-        "add_abs_weight": 1e-4 if not real else 0.03,
-        "observation_level": obs_lvl,
-        "atmodel": atmodel,
-        "n0": n0,
-        "alpha": np.rad2deg(shower.get_parameter(shp.geomagnetic_angle)),
-    }
-
-    if 0:
-        fcn_kwargs["do_sum"] = True
-        mym = MyMinuitMinimizer(
-            objective_ldf_geo_pos, params, fcn_kwargs, verbose=para.plot
-        )
-
-        try:
-            mym.migrad()
-            mym.hesse()
-
-        except ValueError as e:
-            print("failed minuit", e, revent.get_run_number())
-            shower.set_parameter(shp.fit_result, False)
-            return 0
-
-        result = mym
-        pars = result.get_all_param_value_dict()
-
-        if para.plot or result.get_all_param_value_dict()["arel"] > 1:
-            # if para.plot:
-            # print(pars)
-            result.print_result()
-
-    else:
-        # construct model
-        fcn_kwargs["do_sum"] = False
-        ldf_model = lmfit.Minimizer(
-            objective_ldf_geo_pos, params, fcn_kws=fcn_kwargs, nan_policy="omit"
-        )
-
-        if not real:
-            try:
-                # minimization
-                # with default method error of changing array size is causing abort
-                result = ldf_model.minimize("least_squares")
-            except ValueError as e:
-                print("failed", e, revent.get_run_number())
-                shower.set_parameter(shp.fit_result, False)
-                return 0
-        else:
-            # not called
-            result = data_fitting_sequence(
-                objective_ldf_geo_pos, params, fcn_kwargs, para
-            )
-
-            if result is None:
-                print("failed", revent.get_run_number())
-                shower.set_parameter(shp.fit_result, False)
-                return 0
-
-        if para.plot:
-            print(lmfit.fit_report(result))
-
-        pars = result.params.valuesdict()
-        # print(pars)
-
-    if para.plot:
-        print(revent.get_run_number())
-        title = r"E = %.2f EeV, $\theta$ = %.2f$^\circ$, $\alpha$ = %.2f$^\circ$" % (
-            shower.get_parameter(shp.energy) / 1e18,
-            np.rad2deg(shower.get_parameter(shp.zenith)),
-            np.rad2deg(shower.get_parameter(shp.geomagnetic_angle)),
-        )
-        plot_ldf(
-            pars,
-            fcn_kwargs,
-            pos=True,
-            opt="save",
-            label="_%06d%s" % (revent.get_run_number(), para.label),
-            title=title,
-        )
-
-    post_process_store(revent, result, select_or_cleaned)
-
-
-@ray.remote
-def fit_pos_has_ldf_E_geo_ray(revent, para):
-    _fit_pos_has_ldf_E_geo(revent, para)
-    return revent
-
-
-def fit_pos_has_ldf_E_geo(events, para):
-
-    for revent in events:
-        _fit_pos_has_ldf_E_geo(revent, para)
-
-
-def get_fixed_params_from_prev_fit(revent, all_free):
-    shower = revent.get_shower()
-    params = shower.get_parameter(shp.geomagnetic_ldf_parameter)
-
-    # construct model parameter
-    lmfit_params = lmfit.Parameters()
-    for key in params:
-        lmfit_params.add(key, value=params[key], vary=all_free)
-
-    lmfit_params.add(
-        "distance_xmax_geometric",
-        value=shower.get_parameter(shp.distance_to_shower_maximum_geometric_fit),
-        min=5001,
-        max=300000,
-        vary=all_free,
-    )
-
-    # with prev fit, stations are already are already around sym center
-    lmfit_params.add("core_x", value=0, min=-500, max=500, vary=all_free)
-    lmfit_params.add("core_y", value=0, min=-500, max=500, vary=all_free)
-
-    lmfit_params["E_geo"].set(vary=all_free)
-    lmfit_params["r0"].set(min=100, max=2000)
-    return lmfit_params
-
-
-def fit_ce_fraction_sequence(objective, params, fcn_kwargs, para):
-
-    ldf_model = lmfit.Minimizer(objectiv_ldf_has_param, params, fcn_kws=fcn_kwargs)
-
-    # minimization
-    try:
-        result = ldf_model.minimize()
-    except ValueError as e:
-        print("failed (first fit):", e)
-        return None
-
-    if 0:
-        # update parameter
-        params = result.params
-        params["core_x"].set(vary=True)
-        params["core_y"].set(vary=True)
-
-        # model
-        ldf_model = lmfit.Minimizer(objectiv_ldf_has_param, params, fcn_kws=fcn_kwargs)
-
-        # minimization
-        try:
-            result = ldf_model.minimize()
-        except ValueError as e:
-            print("failed (core fit):", e)
-            return None
-
-    if 0:
-        # update parameter
-        params = result.params
-        # params['ce1'].set(vary=True)
-        params["ce2"].set(vary=True)
-
-        ldf_model = lmfit.Minimizer(objectiv_ldf_has_param, params, fcn_kws=fcn_kwargs)
-
-        # minimization
-        try:
-            result = ldf_model.minimize()
-        except ValueError as e:
-            print("failed (ce2 fit):", e)
-            return None
-
-    if 0:
-        # update parameter
-        params = result.params
-        params["ce0"].set(vary=True)
-        # params['ce1'].set(vary=False)
-
-        ldf_model = lmfit.Minimizer(objectiv_ldf_has_param, params, fcn_kws=fcn_kwargs)
-
-        # minimization
-        try:
-            result = ldf_model.minimize()
-        except ValueError as e:
-            print("failed (ce0 fit):", e)
-            return None
-
-    return result
-
 
 def _fit_param_has_ldf(revent, para):
 
@@ -1288,28 +822,18 @@ def _fit_param_has_ldf(revent, para):
     # model
     ldf_model = lmfit.Minimizer(objectiv_ldf_has_param, params, fcn_kws=fcn_kwargs)
 
-    if 1:
-        # minimization
+    # minimization
+    result = ldf_model.minimize()
+    try:
         result = ldf_model.minimize()
-        try:
-            result = ldf_model.minimize()
-        except (TypeError, ValueError) as e:
-            print(revent.get_run_number(), "has param fit failed:", e)
-            shower.set_parameter(shp.fit_result, False)
-            return 1
-        
-        print("Fit successful! Zenith angle", np.round(np.rad2deg(zenith), 2))
-        # print(f"Est./true dmax: {shower.get_parameter(shp.distance_to_shower_maximum_geometric)}")
-        # print(f"Fitted dmax:    {result.params['distance_xmax_geometric'].value}")
-
-    else:
-
-        result = data_fitting_sequence(objectiv_ldf_has_param, params, fcn_kwargs, para)
-
-        if result is None:
-            print("fit_ce_fraction_sequence failed", revent.get_run_number())
-            shower.set_parameter(shp.fit_result, False)
-            return 1
+    except (TypeError, ValueError) as e:
+        print(revent.get_run_number(), "has param fit failed:", e)
+        shower.set_parameter(shp.fit_result, False)
+        return 1
+    
+    print("Fit successful! Zenith angle", np.round(np.rad2deg(zenith), 2))
+    # print(f"Est./true dmax: {shower.get_parameter(shp.distance_to_shower_maximum_geometric)}")
+    # print(f"Fitted dmax:    {result.params['distance_xmax_geometric'].value}")
 
     if para.realistic_input:
         # get density at xmax
@@ -1330,7 +854,7 @@ def _fit_param_has_ldf(revent, para):
         # reconstruct electromagnetic energy for the event
         eem_pred, eem_err = energyreconstruction.get_Eem_from_Egeo(*rec_data, *rec_fit_values, egeo_err=egeo_fit_err, rho_avg=avg_rho)
 
-        redchi = helpers.convert_fit_result(result)['redchi']
+        redchi = convert_fit_result(result)['redchi']
         # get reconstructed zenith angle for title
         zenith_mc = shower.get_parameter(shp.zenith_recon)
         azimuth_mc = shower.get_parameter(shp.azimuth_recon)
@@ -1415,7 +939,7 @@ def _fit_param_has_ldf(revent, para):
         run_no = revent.get_run_number()
         evt_no = revent.get_id()
         
-        redchi = helpers.convert_fit_result(result)['redchi']
+        redchi = convert_fit_result(result)['redchi']
 
         energy_em = shower.get_parameter(shp.electromagnetic_energy)
         zenith_mc = shower.get_parameter(shp.zenith)
@@ -1544,7 +1068,7 @@ def post_process_store(revent, result, select_or_cleaned, para):
             result.__dict__["success"] = False
 
         shower.set_parameter(
-            shp.fit_result, helpers.convert_fit_result(result)
+            shp.fit_result, convert_fit_result(result)
         )  # convert fit_result to dict
     # get fitted core, update core
     core_fit_ground_plane = np.array(
@@ -1600,7 +1124,7 @@ def post_process_store(revent, result, select_or_cleaned, para):
         shower.set_parameter_error(shp.core_fit, core_fit_ground_plane_err)
 
         # redchi
-        redchi = helpers.convert_fit_result(result)['redchi']
+        redchi = convert_fit_result(result)['redchi']
 
         if 1: #(np.rad2deg(dir_err) < 1) and (np.rad2deg(zenith) < 85) and (eem_err / eem_pred < 1) and (dmax_fit_err / dmax_fit < 1):
             # write data into file

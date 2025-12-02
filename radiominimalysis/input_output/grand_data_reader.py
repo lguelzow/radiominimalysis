@@ -154,6 +154,7 @@ def read_measurement_data_from_root(filename, event_and_run):
     # transforms antennas to cartesian coordinates in array reference frame
     antennas = np.array([GRANDCS(arg=Geodetic(latitude=du_lat[i], longitude=du_long[i], height=du_alt[i]), obstime="2024-01-01", location=origin_geoid) 
                                       for i in range(len(du_lat))])
+    0451
     
     # antenna positions extracted from file with obs level added
     antennas_from_data = np.array([[antennas[i, 0, 0], antennas[i, 1, 0], antennas[i, 2, 0]] for i in range(len(antennas))])
