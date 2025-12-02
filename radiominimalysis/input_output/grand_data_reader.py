@@ -163,18 +163,22 @@ def read_measurement_data_from_root(filename, event_and_run, origin=False, plot_
     # get antenna positions from external data file
     # IDs of the triggered antennas
     ids_from_data = np.array(tadc.du_id)
-
-    # mask to select their positions from full list
-    mask_event = np.isin(antenna_ids, ids_from_data)
-
-    # get the antenna position of the event
-    antennas_in_event = antenna_positions_xyz[mask_event]
-    # get it into the right shape
-    #antennas_in_event = np.array([[antennas_in_event[i, 0, 0], antennas_in_event[i, 1, 0], antennas_in_event[i, 2, 0]] for i in range(len(antennas_in_event))])
-
+    
     # get antenna arrival times
-    antenna_s = np.array(tadc.du_seconds) * 1e9
-    antennas_ns = np.array(tadc.du_nanoseconds)
+    event_antenna_s = np.array(tadc.du_seconds) 
+    event_antennas_ns = np.array(tadc.du_nanoseconds)
+
+    # get total antenna times
+    antenna_times = event_antenna_s - min(event_antenna_s)
+    antenna_times =  event_antenna_s + (event_antennas_ns / 1e9)
+    
+    # different way to get antenna times
+    du_s = event_antenna_s.flatten()
+    du_s = (du_s - du_s.min()).astype(np.float64)
+    du_ns = event_antennas_ns.flatten() / 1e9 
+    du_trig = du_s + du_ns.astype(np.float64)
+    arrival_times = du_trig
+
 
     # only take the last 3 entries of ADC trace
     # which are the NWU channels
