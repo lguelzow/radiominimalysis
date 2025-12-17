@@ -2,7 +2,7 @@ from tkinter import E
 from radiominimalysis.framework import factory
 from radiominimalysis.framework.parameters import \
     showerParameters as shp, eventParameters as evp, stationParameters as stp
-from radiominimalysis.utilities import helpers, stats as helperstats, energyreconstruction, plthelpers
+from radiominimalysis.utilities import stats as helperstats, energyreconstruction
 
 from radiominimalysis.modules.method_evaluation.gauss_sigmoid_param import get_bins_for_x_from_binned_data
 
@@ -10,11 +10,10 @@ from radiotools.atmosphere import models as atm
 from radiotools.analyses import radiationenergy
 from radiotools import helper
 
-from radiominimalysis.modules.method_evaluation import pyplots, pyplots_utils
+from radiominimalysis.utilities import pyplots
 
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import cmasher as cmr
 
@@ -23,168 +22,32 @@ import numpy as np
 import iminuit
 
 
-def evaluate_gauss_sigmoid_core(events, para):
+def get_data_bins(data, bins, return_bins=False, eps=1e-6):
+    n, edges = np.histogram(data, bins)
 
-    if events[0].has_station_parameter(stp.name): # ) == 240:
-        has_shower = np.array([ev.has_shower(evp.rd_shower) for ev in events])
-        print("Events with Rd shower: %d / %d" %
-            (np.sum(has_shower), len(has_shower)))
-        events = np.array(events)[has_shower]
+    edges[-1] += eps  # to include the highest value in the bin
+    masks = np.array(
+        [np.all([data >= edges[idx], data < edges[idx + 1]], axis=0) for idx in range(len(n))])
+    center_values = edges[:-1] + (edges[1:] - edges[:-1]) / 2
+    
+    if np.sum(masks) != len(data):
+        print("get_data_bins(): sum(masks) != len(data)")
+        print(np.sum(masks), len(data), data[~np.any(masks, axis=0)])
 
-        mask = factory.has_parameter(events, shp.fit_result)
-        print("Events with fit result: %d / %d" % (np.sum(mask), len(mask)))
-        events = np.array(events)[mask]
+    if return_bins:
+        return center_values, masks, edges
     else:
-        events = event_selection_ldf_validation(events,
-                                   mc_xmax_cut=True,
-                                   has_any_stations=True, 
-                                   direction_error_cut=True, 
-                                   station_number_cut_SNR_cut=5,
-                                   has_successful_fit=True,
-                                   cherenkov_radius_cut=1,
-                                   chi_percentile_cut=False,
-                                   dmax_error_cut=True,
-                                   egeo_error_cut=True,
-                                   large_dmax_cut=True, 
-                                   saturation_cut=False
-                                   )
-
-    distance_to_xmax_mc = factory.get_parameter(events, shp.distance_to_shower_maximum_geometric)
-
-    zenith = factory.get_parameter(events, shp.zenith_recon)
-
-    geo_ldf_params_fit = factory.get_parameter(events, shp.geomagnetic_ldf_parameter)
-    r0 = np.array([x['r0'] for x in geo_ldf_params_fit])
-    
-    # core deviation from estimate start value
-    core_fit = factory.get_parameter(events, shp.core_fit)
-    # core_fit_error = factory.get_parameter_error(events, shp.core_fit)
-
-    # core fit in shower plane 
-    core_fit_shower_plane = factory.get_parameter(events, shp.core_fit_shower_plane)
-
-    # core prediction in shower plane
-    core_pred_sp = factory.get_parameter(events, shp.core_pred_shower_plane)
-
-    # print(core_fit_error)
-
-    core_mc = factory.get_parameter(events, shp.core) - core_fit
-
-    # get mc core
-    core_new = factory.get_parameter(events, shp.core_estimate) + core_fit
-
-    core_deviation = core_mc - core_new
-
-    # predicted core shift from zenith angle
-    core_shift_predict = factory.get_parameter(events, shp.prediceted_core_shift)
-
-    # for diff in ["ground_plane", "early_late"]:
-                
-    #     # fig2, ax2 = plt.subplots(1)
-
-    #     # # fitted core
-    #     # core_shower = factory.get_parameter(
-    #     #     events, shp.core_fit)
-
-    #     # sct = ax2.scatter(core_shower[:, 0], core_shower[:, 1], c=distance_to_xmax_mc / 1e3)
-    #     # cbi = plt.colorbar(sct, pad=0.02)
-    #     # cbi.set_label(r"$d_\mathrm{max}^\mathrm{MC}$ / km")
-    #     # ax2.grid()
-    #     # ax2.set_xlabel(r"Position on $\vec{v} \times \vec{B}$ / m")
-    #     # ax2.set_ylabel(r"Position on $\vec{v} \times (\vec{v} \times \vec{B})$ / m")
-
-    #     # fig.tight_layout()
-    #     # fig2.tight_layout()
+        return center_values, masks
 
 
-    #     if diff == "ground_plane":
-    #         diff_core = core - mc_core
-    #         xlabel = "East to West / m"
-    #         ylabel = "North to South / m"
-        
-    #     elif diff == "vxB":
-    #         diff_core = np.array([
-    #             ev.get_coordinate_transformation(
-    #                 evp.rd_shower).transform_to_vxB_vxvxB(rc, mc_core)
-    #             for ev, rc in zip(events, core)])
-
-    #         xlabel = r"Position on $\vec{v} \times \vec{B}$ / m"
-    #         ylabel = r"Position on $\vec{v} \times (\vec{v} \times \vec{B})$ / m"
-        
-    #     # elif diff == "early_late":
-
-    #     #     diff_core = np.array([
-    #     #         ev.get_coordinate_transformation(
-    #     #             evp.rd_shower).transform_to_early_late(rc, mc_core)
-    #     #         for ev, rc in zip(events, core)])
-
-    #     #     xlabel = "Perpendicular to v / m"
-    #     #     ylabel = "Early to Late / m"
-        
-    #     else:
-    #         sys.exit("Wrong entry!")
-
-
-    fig_core, ax_core = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 10))
-    sct = ax_core[0].scatter(
-        np.rad2deg(zenith),
-        np.sqrt(core_deviation[:, 0] ** 2 + core_deviation[:, 1] ** 2),
-        c=distance_to_xmax_mc / 1e3, cmap="viridis",
-        label="Fitted core displacement",
-        s=6,
-    )
-    ax_core[0].scatter(
-        np.rad2deg(zenith),
-        np.sqrt(core_shift_predict[:, 0] ** 2 + core_shift_predict[:, 1] ** 2),
-        label="Predicted core displacement", 
-        color="black",
-        s=6,
-    )
-    sct = ax_core[1].scatter(
-        np.rad2deg(zenith),
-        np.sqrt(core_fit_shower_plane[:, 0] ** 2 + core_fit_shower_plane[:, 1] ** 2),
-        c=distance_to_xmax_mc / 1e3, cmap="viridis",
-        label="Core deviation in shower plane",
-        s=6,
-    )
-    ax_core[1].scatter(
-        np.rad2deg(zenith),
-        r0,
-        label="Cherenkov Radius", 
-        color="red", alpha=0.3,
-        s=6,
-    )
-    ax_core[1].scatter(
-        np.rad2deg(zenith),
-        np.sqrt(core_pred_sp[:, 0] ** 2 + core_pred_sp[:, 1] ** 2),
-        label="Pred. shower plane displacement", 
-        color="black",
-        s=6,
-    )
-
-    cbi = plt.colorbar(sct, pad=0.02)
-    cbi.set_label("dmax [km]")
-
-    ax_core[0].legend(fontsize=17)
-    ax_core[1].legend(fontsize=17)
-    ax_core[0].set_ylim(2, 3000)
-    ax_core[0].set_yscale("log")
-    ax_core[0].set_xlabel(r"Zenith [°]")
-    ax_core[1].set_xlabel(r"Zenith [°]")
-    ax_core[0].set_ylabel("Distance [m]")
-
-    
-
-    
-    if para.save:
-        plt.savefig("fitted_core_%s.png" % (para.label))
-        # fig2.savefig("fitted_core_showerplane%s.png" % para.label)
-
-    if not para.save:
-        plt.show()
-
-    plt.close()
-
+def get_pp_index_acronym(pnum, corsika=False):
+    acr = ["p", "He", "N", "Fe"]
+    colors = ["r", "C1", "g", "b"]
+    if corsika:
+        idx = [14, 402, 1407, 5626].index(pnum)
+    else:
+        idx = [2212, 1000002004, 1000007014, 1000026056].index(pnum)
+    return idx, acr[idx], colors[idx]
 
 
 def evaluate_gauss_sigmoid_chi(events, para):
@@ -799,63 +662,6 @@ def print_magnetic_field_variation(events, para):
     print(np.mean(np.rad2deg(inclinations)), np.std(np.rad2deg(inclinations)))
 
 
-# def x_check_plot_charge_excess_fraction(events, para):
-#     events = event_selection_ldf_validation(events, para)
-
-#     f_geo = factory.get_parameter(events, stp.charge_excess_fluence_parametric) 
-
-
-def print_missing_simulations(events, para):
-    had = 0
-    run_number = np.array([ev.get_run_number() for ev in events])
-    n_missing = 0
-    for i in range(4):
-        for j in range(2000):
-            number = int("%d%d%04d" % (i, had, j))
-            if not np.any(run_number == number):
-                print(number)
-                n_missing +=1
-
-    print("Found %d missing events" % n_missing)
-
-    un, nr = np.unique(run_number, return_counts=True)
-    if not np.all(nr == 1):
-        print("Found duplicated event numbers:", un[nr > 1.2])
-        identical = True
-        for dr in un[nr > 1.2]:
-            devents = events[run_number == dr]
-            e1, e2 = devents[:]
-
-            if not e1 == e2:
-                print("Duplicated events **are not** identical")
-                identical = False
-        if identical:
-            print("Duplicated events **are** identical")
-
-
-def remove_dublicated_events(events):
-    run_number = np.array([ev.get_run_number() for ev in events])
-
-    urun_number, uidxs, nr = np.unique(
-        run_number, return_index=True, return_counts=True)
-    
-    # if not np.all(nr == 1):
-    #     print("Found duplicated event numbers:", urun_number[nr > 1.2])
-    #     identical = True
-    #     for dr in urun_number[nr > 1.2]:
-    #         devents = events[run_number == dr]
-    #         e1, e2 = devents[:]
-
-    #         if not e1 == e2:
-    #             print("Duplicated events **are not** identical")
-    #             identical = False
-    #     if identical:
-    #         print("Duplicated events **are** identical")
-
-    uevents = events[uidxs]
-    print("Select unique events: %d / %d" % (len(uevents), len(events)))
-    return uevents
-
 
 def evaluate_fit_result(events, para):
 
@@ -865,8 +671,6 @@ def evaluate_fit_result(events, para):
     # for parameters like zenith angle and energy range 
     # and not fit dependent parameters
     compare_events = events
-    
-    azimuth = factory.get_parameter(events, shp.azimuth)
 
     print("\n" + "Preselection of events!")
     events = event_selection_ldf_validation(events, has_any_stations=False,
@@ -907,12 +711,10 @@ def evaluate_fit_result(events, para):
     # shower parameters
     obs_level = factory.get_parameter(events, shp.observation_level)
     atmodels = factory.get_parameter(events, shp.atmosphere_model)
-    event_info = factory.get_ids(events)
 
     # mc parameters
     xmax_mc = factory.get_parameter(events, shp.xmax)
     zenith_mc = factory.get_parameter(events, shp.zenith)
-    azimuth = factory.get_parameter(events, shp.azimuth)
     eem_mc = factory.get_parameter(events, shp.electromagnetic_energy)
     geomag_angle_mc = np.array([ev.get_geomagnetic_angle() for ev in events])
         
@@ -966,12 +768,9 @@ def evaluate_fit_result(events, para):
             h = atm.get_height_above_ground(d, z, obs) + obs
             rho_fit[idx] = atm.get_density(h, model=model) * 1e-3
 
-    # avg_rho = 0.3113839703192573 # for Auger starshapes
-    avg_rho = 0.2171571758825658 # for GRAND starshapes
-    # avg_rho = 0.1824397683568155 # for GRAND10k # redetermine
-    # avg_rho = 0.1898638482943444 # for GP300
-    
-    # avg_rho = 0.2198652024574925 # test
+    # avg_rho = 0.3113839703192573 # for Auger
+    avg_rho = 0.2171571758825658 # for GRAND
+
     
     run_number = np.array([ev.get_run_number() for ev in events])
     nr, nu = np.unique(run_number, return_counts=True)
@@ -1178,7 +977,7 @@ def evaluate_fit_result(events, para):
         ax1.legend(loc="upper left", fontsize=fontsize-10)
         ax1.tick_params(labelsize=fontsize-8)
 
-        energies_bins_center, energies_mask, energy_edges = helpers.get_data_bins(
+        energies_bins_center, energies_mask, energy_edges = get_data_bins(
             np.log10(eem_mc), bins=10, return_bins=True)
         eem_rec_ratio_energy = np.array(
             [eem_pred[mask] / eem_mc[mask] for mask in energies_mask], dtype=object)
@@ -1263,7 +1062,7 @@ def evaluate_fit_result(events, para):
             # if len(np.unique(xval)) < 100:
             #     bins = np.arange(65, 85.01, 2)
 
-            bc, masks, edges = helpers.get_data_bins(
+            bc, masks, edges = get_data_bins(
                 xval, bins=bins, return_bins=True)
             
             eem_rec_ratio_energy = np.array(
@@ -1868,7 +1667,7 @@ def evaluate_fit_result(events, para):
 
         # binning of each zenith bin into energy bins
         # shape: (bins, 3) as bins_centers, masks, edges
-        double_bins = np.array([helpers.get_data_bins(np.log10(eem_mc_hist[i]), bins=energy_bins, return_bins=True) 
+        double_bins = np.array([get_data_bins(np.log10(eem_mc_hist[i]), bins=energy_bins, return_bins=True) 
                                                                                 for i in range(len(eem_mc_hist))], dtype=object)
 
         # ratios of reconstructed vs. MC energies for each bin
@@ -1957,7 +1756,7 @@ def evaluate_fit_result(events, para):
             
             # binning of each zenith bin into energy bins
             # shape: (bins, 3) as bins_centers, masks, edges
-            double_bins = np.array([helpers.get_data_bins(np.log10(eem_mc_hist_full[i]), bins=energy_bins, return_bins=True) 
+            double_bins = np.array([get_data_bins(np.log10(eem_mc_hist_full[i]), bins=energy_bins, return_bins=True) 
                                                                                     for i in range(len(eem_mc_hist_full))], dtype=object)
 
             # array for saturated antennas for each zenith bin
@@ -2033,16 +1832,6 @@ def evaluate_fit_result(events, para):
             fig_hist_unsat.savefig("b_unsaturated_2Dhist.png")
             print("Histograms saved!")
             plt.close()
-
-    if 0:
-        fig_eng2, ax = plt.subplots(1, figsize=(16, 9))
-        var = (eem_pred - eem_mc) / eem_err
-        
-        ax.hist(var, 100, label=(r"$\mu$ = {:.1f}" + "\n" + r"$\sigma$ = {:.1f}").format(np.mean(var), np.std(var)))
-        ax.set_xlabel(r"($E_\mathrm{em}^\mathrm{rec} - E_\mathrm{em}^\mathrm{MC}$) / $\sigma_{E_\mathrm{em}^\mathrm{rec}}$")
-        ax.legend()
-        # ax.set_xlim(-15, 15)
-        fig_eng2.tight_layout()
 
     # density correction plot
     if 1:
@@ -2166,7 +1955,7 @@ def evaluate_fit_result(events, para):
             ax2 = fig_primary.add_axes([0.15, 0.25, 0.25, 0.2])
             for pdx, p in enumerate(np.unique(pp)):
                 pmask = pp == p
-                _, l, c = helpers.get_pp_index_acronym(int(float(p)), corsika=True)
+                _, l, c = get_pp_index_acronym(int(float(p)), corsika=True)
                 ax.hist((eem_pred / eem_mc)[pmask], np.linspace(0.5, 1.5, 25), histtype="step", color=c, edgecolor=c,
                         alpha=1, lw=3, label=r"%s: $\mu$ = %.4f,""\n\t"r"$\sigma$ = %.3f "
                         % (l, np.mean((eem_pred / eem_mc)[pmask]), np.std((eem_pred / eem_mc)[pmask])))
