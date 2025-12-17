@@ -1,8 +1,8 @@
-python3 /cr/users/guelzow/simulations/radiominimalysis/scripts/ER_reconstruct_energy_from_pickle.py \
---paths /cr/aera02/huege/guelzow/factories_thesis/10k_ADC_5sig_fitted_LDFs.pickle \
+python /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/ER_reconstruct_energy_from_pickle.py \
+--paths /cr/aera02/huege/guelzow/factories_params/GRAND_intrinsic.pickle \
 --save \
 --plot \
---realistic_input \
+# --realistic_input \
 
 
 

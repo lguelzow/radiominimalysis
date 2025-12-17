@@ -1,4 +1,4 @@
-python3 /cr/users/guelzow/simulations/radiominimalysis/scripts/LDF_process_all_sims_parallel.py \
+python3 /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/LDF_fit_parallel.py \
 --paths /cr/aera02/huege/guelzow/factories_thesis/GP300_L1_MC_pull_read-in.pickle \
 --save GP300_L1_MC_pull_pre_fit.pickle \
 --parallel_jobs 24 \
