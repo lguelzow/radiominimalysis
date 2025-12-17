@@ -5,7 +5,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from radiotools.atmosphere import models as atm
 from scipy import stats
 import matplotlib.ticker as tick 
-import cmasher as cmr
 
 from radiominimalysis.framework import factory
 from radiominimalysis.framework.parameters import (
@@ -14,15 +13,27 @@ from radiominimalysis.framework.parameters import (
 )
 from radiominimalysis.utilities import (
     cherenkov_radius as che,
-    helpers,
     stats as helperstats,
 )
 
 from lmfit import (Minimizer, Parameters, conf_interval, conf_interval2d,
                    report_ci, report_fit)
 
+def get_fine_xs(arr, N=1000, log=False):
+    if log:
+        min = np.log10(np.amin(arr[arr > 0]))
+        return np.logspace(min, np.log10(np.amax(arr)), N)
+    else:
+        return np.linspace(np.amin(arr), np.amax(arr), N)
 
-def evaluate_fitted_cherenkov_radius(events, para):
+def evaluate_fitted_cherenkov_radius(events):
+    """
+    Evaluate fitted r0 parameter/Cherenkov radius 
+    
+    :param events: revent objects with completed LDF fits
+    
+    Returns: A plot showing the deviation between the local Cherenkov angle and the opening angle angle of the cone describing the fitted Cherenkov ring
+    """
 
     plt.rcParams['font.size'] = 13
 
@@ -71,7 +82,6 @@ def evaluate_fitted_cherenkov_radius(events, para):
     fig, axs = plt.subplots(2, sharex=True)
     idx = 0
     for model in np.unique(atmodels)[::-1]:
-        at = atm.Atmosphere(model)
         for n0 in np.unique(n0s):
             for obs in np.unique(obs_levels):
 
@@ -92,7 +102,6 @@ def evaluate_fitted_cherenkov_radius(events, para):
 
                 delta = che.get_cherenkov_angle_model(h_asl, n0, model)
                 n_h = atm.get_n(h_asl, n0=n0, model=model)
-                delta_test = np.arccos(1 / n_h)
                 alpha = np.amin([0.2, 200 / np.sum(mask)])
 
                 if use_rho:
@@ -102,16 +111,8 @@ def evaluate_fitted_cherenkov_radius(events, para):
 
                 yval = (cherenkov_angle_rec[mask] / delta)
 
-                # axs[1].plot(xval, (cherenkov_angle_rec[mask] / delta), "o", alpha=alpha)
-
-                # axs[1].set_ylim(0.87, 0.94)
-                # axs[1].set_xlim(89000, 112000)
-
                 # get quantity for colormap
                 energy = factory.get_parameter(events, shp.energy)
-                # colormap = energy
-                # print(colormap)
-                
 
                 # parameter = axs[1].scatter(xval / 1000, cherenkov_angle_rec[mask] / delta, marker="o", s=10, alpha=0.6, c="orange")
                 parameter = axs[1].scatter(xval / 1000, cherenkov_angle_rec[mask] / delta, marker="o", s=10, alpha=0.2, cmap="plasma", c=np.log10(energy[mask]), vmin=18.4, vmax=20.2)
@@ -123,7 +124,6 @@ def evaluate_fitted_cherenkov_radius(events, para):
                 cbar = plt.colorbar(parameter, ax=axs[1], cax=cax, format=tick.FormatStrFormatter('%.1f'))
                 cbar.set_label(r"log(Energy / EeV)")
 
-                # print("Mean of colormap: ", np.mean(colormap))
 
                 # define parametrisation function
                 def r_0_deviation_model(dmax, c0, c1, c2):
@@ -172,7 +172,6 @@ def evaluate_fitted_cherenkov_radius(events, para):
                 # 2nd index gives you the value of the confidence level
 
                 ci_r0_dev_high = r_0_deviation_model(dmax=dmax_range, c0=ci['c0'][index_high][1], c1=ci['c1'][index_high][1], c2=ci['c2'][index_high][1])
-                
                 ci_r0_dev_low = r_0_deviation_model(dmax=dmax_range, c0=ci['c0'][index_low][1], c1=ci['c1'][index_low][1], c2=ci['c2'][index_low][1])
 
                 # plot confidence regions
@@ -247,54 +246,16 @@ def evaluate_fitted_cherenkov_radius(events, para):
     plt.savefig("Cherenkov_comparison.png", dpi=300)
     plt.show()
     
-    
-def r0_param(r0_start, x, a0, a1, a2,):
-    dmax = x
-    return r0_start * (a0 + (a1 * dmax) + (a2 / dmax / dmax))
 
 
 def r02_arel_param(x, a0, a1, a2, a3=0):
     dmax, dmax_avg = x
     return a0 + a1 * dmax + a2 / dmax ** 2 + a3 * (dmax - dmax_avg)
-    # return a0 + a1 * dmax + a2 / dmax ** 2 + a3 * (np.log10(dmax) - np.log10(dmax_avg))
-
-
-def r02_arel_param2(x, a0, a1, a2):
-    dmax = x
-    return a0 + a1 * dmax + a2 / dmax
-
-
-def r02_arel_param_rho(x, a0, a1, a2, a3=0):
-    rho, rho_avg = x
-    return a0 + a1 * rho + a2 * rho ** 2 + a3 * (rho - rho_avg)
 
 
 def sig_param(x, a, b, c, d=0):
     dmax, dmax_avg = x
-    return a * (dmax - 5e3) ** b + c + d * (dmax - dmax_avg)
-
-
-def p_param(x, a, b, c, d=0):
-    dmax, dmax_avg = x
-    return a * np.exp(-b * dmax) + c + d * (dmax - dmax_avg)
-    # return a / (1 + np.exp(-b * (x - c)))
-
-
-def p_param_new_rho(rho, a, b):
-    return a * rho + b
-
-
-def r02_param_rho_new(rho, a, b, c=1):
-    return a * np.exp(-b * rho) + c
-
-
-def r02_power_law(x, a, b, c, d=0):
-    dmax, dmax_avg = x
-    return a * (dmax - 5e3) ** b + c + d * (dmax - dmax_avg)
-
-def r02_exponential(x, a, b, c): 
-    dmax = x
-    return a - b * np.exp(-dmax * c)
+    return a * (dmax - 5e3) ** b + c + d * (dmax - dmax_avg) 
 
 
 def objective_func_leastsq(pars, func, x, y, yerr):
@@ -460,7 +421,7 @@ def plot_parameter(
     y = np.copy(y)
     yerr = np.copy(yerr)
 
-    xmodel = helpers.get_fine_xs(x)
+    xmodel = get_fine_xs(x)
     if plot_param:
         try:
             res = iminuit.minimize(
@@ -585,97 +546,7 @@ def get_r0_param_and_avg_data_and_colors(events, cal_avg=True):
     return r0_param, dmax_mc_avg, rho_mc_avg, colors
 
 
-def draw_offline_param(axs, dmax, fmt):
-    # param which was used for first version of gaus+sigmoid
-
-    # sig
-    axs[1, 0].plot(
-        dmax / 1e3,
-        sig_param((dmax, dmax), *[0.16848311, 0.69447957, 39.81137662]),
-        fmt,
-        zorder=10,
-    )
-    # r02
-    axs[0, 1].plot(
-        dmax / 1e3,
-        r02_arel_param((dmax, dmax), *[5.33720788e-01, 8.37285946e-07, 5.27475125e07]),
-        fmt,
-        zorder=10,
-    )
-
-    # p
-    p = lambda x: 1.85054143e00 / (1 + np.exp(-4.20849856e-05 * (x + 2.86110554e04)))
-    axs[1, 1].plot(dmax / 1e3, p(dmax), fmt, zorder=10)
-
-    # arel
-    axs[0, 2].plot(
-        dmax / 1e3,
-        r02_arel_param((dmax, dmax), *[7.47991658e-01, 8.11304687e-07, 1.72095209e07]),
-        fmt,
-        zorder=10,
-    )
-
-
-def draw_hard_param(axs, dmax, fmt, label='"hard p"'):
-    # new param with hard p and without d750
-
-    # sig
-    axs[1, 0].plot(
-        dmax / 1e3,
-        sig_param((dmax, dmax), *[0.16460107, 0.69675388, 39.46602294]),
-        fmt,
-        zorder=10,
-    )
-    # wo d750 0.16460107  0.69675388 39.46602294
-    # with d750: 0.174353946  0.692199262. 37.0561452
-
-    # p
-    axs[1, 1].plot(
-        dmax / 1e3,
-        p_param((dmax, dmax), *[-4.94492500e-01, 3.90450109e-05, 1.85763162e00]),
-        fmt,
-        zorder=10,
-    )
-    # wo d750: -4.94492500e-01  3.90450109e-05  1.85763162e+00
-    # with d750: -4.66078147e-01, 3.60604450e-05, 1.86010517e+00
-
-    # arel
-    axs[0, 2].plot(
-        dmax / 1e3,
-        r02_arel_param((dmax, dmax), *[7.57300343e-01, 7.76904953e-07, 1.63545932e07]),
-        fmt,
-        zorder=10,
-    )
-    # wo d750: 7.57300343e-01 7.76904953e-07 1.63545932e+07
-    # with d750: 7.56127634e-01 7.67832252e-07 1.70017091e+07 (2.86813527e-06)
-    # with d750 (only sig): 7.56920056e-01 7.69145360e-07 1.61848905e+07
-
-    # r02
-    axs[0, 1].plot(
-        dmax / 1e3,
-        r02_arel_param((dmax, dmax), *[5.48029929e-01, 7.06584317e-07, 5.06592690e07]),
-        fmt,
-        zorder=10,
-    )
-    # wo d750: 5.48029929e-01 7.06584317e-07 5.06592690e+07
-    # with d750: 5.40745182e-01 7.08091188e-07 5.00073845e+07
-    # with d750 (only sig): 5.49448820e-01 6.98439471e-07 4.95005832e+07
-
-    axs[1, 2].plot(np.nan, np.nan, fmt, label=label)
-
-
-def draw_soft_param(axs, r0_start, dmax, dmax_avg, fmt, label='"soft p"', plot_p=True, linewidth=3):
-    # new param with soft p. param is with d750 (sig arel), here drawn without it
-    
-    # r0
-    # axs[0, 0].plot(
-    #     dmax / 1e3,
-    #     r0_param(r0_start, dmax, *[0.81810574,5.6302e-07,-36815284.6]),
-    #     fmt,
-    #     zorder=10, ls="--", lw=linewidth
-    # )
-    # Auger 0.94061131,-2.2048e-07,-15960366.4
-    # GRAND 0.81810574,5.6302e-07,-36815284.6
+def draw_ldf_param(axs, r0_start, dmax, dmax_avg, fmt, label='"soft p"', plot_p=True, linewidth=3):
     
     # sig
     axs[1, 0].plot(
@@ -911,264 +782,131 @@ def evaluate_gauss_sigmoid_pars(events, para):
         plot_colormap=show_colormap,
     )
 
-    # if plot_param:
-    #     axs[0, 0].plot(dmax_mc / 1e3, r0_param, "k.")
-    #     axs_res[0, 0].plot(dmax_mc / 1e3, (r0_param - r0) /
-    #                        r0_param, "C0o", alpha=0.1)
+    sig_popt = plot_parameter(
+        axs[1, 0],
+        dmax_mc,
+        sig,
+        sig_err,
+        colors=colors,
+        func=sig_param,
+        pl_profile=pl_profile,
+        xbins=dmax_bins,
+        p0=[2.82209732e-02,8.00859075e-01,6.12971298e+01], # Auger Param
+        # p0 = [3.50114248e-02,7.69590775e-01,6.29361743e+01],  # GRAND param
+        plot_param=False, # plot_param,
+        ylabel=r"Gaussian width $\sigma$ [m]",
+        xlabel=dmax_lab,
+        ax_res_xlabel=dmax_lab_avg,
+        x_avg=dmax_mc_avg,
+        plot_avg=res_avg,
+        ax_res=axs_res[1, 0],
+        # ylim=[50, 600],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
 
-    if not 0:
-        sig_popt = plot_parameter(
-            axs[1, 0],
-            dmax_mc,
-            sig,
-            sig_err,
-            colors=colors,
-            func=sig_param,
-            pl_profile=pl_profile,
-            xbins=dmax_bins,
-            p0=[2.82209732e-02,8.00859075e-01,6.12971298e+01], # Auger Param
-            # p0 = [3.50114248e-02,7.69590775e-01,6.29361743e+01],  # GRAND param
-            plot_param=False, # plot_param,
-            ylabel=r"Gaussian width $\sigma$ [m]",
-            xlabel=dmax_lab,
-            ax_res_xlabel=dmax_lab_avg,
-            x_avg=dmax_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[1, 0],
-            # ylim=[50, 600],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
+    r02_popt = plot_parameter(
+        axs[0, 1],
+        dmax_mc,
+        r02,
+        r02_err,
+        colors=colors,
+        func=r02_arel_param,
+        pl_profile=pl_profile,
+        xbins=dmax_bins,
+        # p0=[6.66316714e-01,2.62444830e-07,-6.49935124e+07], # Auger param
+        p0=[5.85629629e-01,8.50072265e-07,-1.66284834e+08], # GRAND param
+        # p0=[100, 0.1, -0.5], # for exp form
+        ylabel=r"Sigmoid length scale $r_{02}$ [$r_0$]",
+        plot_param=plot_param,
+        xlabel=dmax_lab,
+        ax_res_xlabel=dmax_lab_avg,
+        x_avg=dmax_mc_avg,
+        plot_avg=res_avg,
+        ax_res=axs_res[0, 1],
+        ylim=[0, 1],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
 
-    else:
-        sig_popt = plot_parameter(
-            axs[1, 0],
-            rho_mc,
-            sig,
-            sig_err,
-            colors=colors,
-            #  func=sig_param, pl_profile=pl_profile, xbins=dmax_bins,
-            #  p0=[0.11514358, 0.72509144, 50.91115447],
-            plot_param=False,
-            ylabel=r"$\sigma$ / m",
-            xlabel=rho_lab,
-            ax_res_xlabel=rho_lab_avg,
-            x_avg=rho_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[1, 0],
-            ylim=[50, 510],
-        )
+    p_popt = plot_parameter(
+        axs[1, 1],
+        dmax_mc,
+        p,
+        p_err,
+        colors=colors,
+        func=r02_arel_param,
+        pl_profile=pl_profile,
+        xbins=dmax_bins,
+        p0=[2.90121335e+02,-3.40459094e-04,-7.95160431e+09],  # Auger param
+        # p0=[2.47077170e+02, -2.06317205e-04, -8.93411554e+09],  # GRAND param
+        plot_param=False, # plot_param,
+        ylabel=r"Outer Gaussian slope $b$",
+        xlabel=dmax_lab,
+        ax_res_xlabel=dmax_lab_avg,
+        x_avg=dmax_mc_avg,
+        plot_avg=res_avg,
+        ax_res=axs_res[1, 1],
+        ylim=[175, 350],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
+    
+    arel_popt = plot_parameter(
+        axs[0, 2],
+        dmax_mc,
+        arel,
+        arel_err,
+        colors=colors,
+        func=r02_arel_param,
+        pl_profile=pl_profile,
+        xbins=dmax_bins,
+        p0=[2.26817787e-01,3.07137877e-07,5.57521446e+04], # Auger param
+        # p0=[2.64147015e-01, 5.08310712e-07, -1.30682037e+07], # GRAND param
+        plot_param=False, #plot_param,
+        ylabel=r"Sigmoid rel. amplitude $a_\mathrm{rel}$",
+        xlabel=dmax_lab,
+        ax_res_xlabel=dmax_lab_avg,
+        x_avg=dmax_mc_avg,
+        plot_avg=res_avg,
+        ax_res=axs_res[0, 2],
+        ylim=[0, 0.5],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
 
-    if not para_rho:
-        r02_popt = plot_parameter(
-            axs[0, 1],
-            dmax_mc,
-            r02,
-            r02_err,
-            colors=colors,
-            func=r02_arel_param,
-            pl_profile=pl_profile,
-            xbins=dmax_bins,
-            # p0=[6.66316714e-01,2.62444830e-07,-6.49935124e+07], # Auger param
-            p0=[5.85629629e-01,8.50072265e-07,-1.66284834e+08], # GRAND param
-            # p0=[100, 0.1, -0.5], # for exp form
-            ylabel=r"Sigmoid length scale $r_{02}$ [$r_0$]",
-            plot_param=plot_param,
-            xlabel=dmax_lab,
-            ax_res_xlabel=dmax_lab_avg,
-            x_avg=dmax_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[0, 1],
-            ylim=[0, 1],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
+    p_slope_popt = plot_parameter(
+        axs[0, 3],
+        dmax_mc,
+        p_slope,
+        p_slope_err,
+        colors=colors,
+        func=r02_arel_param,
+        pl_profile=pl_profile,
+        xbins=dmax_bins,
+        p0=[1.50262520e+00,-3.12110331e-07,2.41040614e+07],  # Auger param
+        # p0=[1.52326814e+00,-8.41306536e-07,-9.33299796e+07],  # GRAND param
+        plot_param=plot_param,
+        ylabel=r"Inner Gaussian slope $p_\mathrm{inner}$",
+        xlabel=dmax_lab,
+        ax_res_xlabel=dmax_lab_avg,
+        x_avg=dmax_mc_avg,
+        plot_avg=res_avg,
+        ax_res=axs_res[0, 3],
+        ylim= [1.1, 1.9], # [0.95, 2.55],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
 
-    else:
-        r02_popt = plot_parameter(
-            axs[0, 1],
-            rho_mc,
-            r02,
-            r02_err,
-            colors=colors,
-            pl_profile=pl_profile,
-            xbins=rho_bins,
-            func=r02_arel_param_rho,
-            p0=[5.45164084e-01, 1.18724857e-06, -1.34437089e+08],
-            #  p0=[0.87789526, -2.10422792, 4.00626784],
-            #  func=r02_param_rho_new,
-            #  p0=[2834.97515674, 10.21176029, 202.19502505],
-            plot_param=plot_param,
-            # ylabel=r"$r_{02}$ [m]",
-            ylabel=r"$r_{02}$ [$r_0$]",
-            xlabel=rho_lab,
-            ax_res_xlabel=rho_lab_avg,
-            x_avg=rho_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[0, 1.05],
-            ylim=[0, 1.5],
-        )
 
-    if not 0:
-        p_popt = plot_parameter(
-            axs[1, 1],
-            dmax_mc,
-            p,
-            p_err,
-            colors=colors,
-            func=r02_arel_param,
-            pl_profile=pl_profile,
-            xbins=dmax_bins,
-            p0=[2.90121335e+02,-3.40459094e-04,-7.95160431e+09],  # Auger param
-            # p0=[2.47077170e+02, -2.06317205e-04, -8.93411554e+09],  # GRAND param
-            plot_param=False, # plot_param,
-            ylabel=r"Outer Gaussian slope $b$",
-            xlabel=dmax_lab,
-            ax_res_xlabel=dmax_lab_avg,
-            x_avg=dmax_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[1, 1],
-            ylim=[175, 350],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
-    else:
-        p_popt = plot_parameter(
-            axs[1, 1],
-            rho_mc,
-            p,
-            p_err,
-            colors=colors,
-            func=p_param_new_rho,
-            pl_profile=pl_profile,
-            xbins=rho_bins,
-            p0=[1.88980566e+02, 6.09216147e-05, 2.02829398e+02],
-            plot_param=plot_param,
-            ylabel=r"$b$",
-            xlabel=rho_lab,
-            ax_res_xlabel=rho_lab_avg,
-            x_avg=rho_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[1, 1],
-            ylim=[0, 500],
-        )
-
-    if not para_rho:
-        arel_popt = plot_parameter(
-            axs[0, 2],
-            dmax_mc,
-            arel,
-            arel_err,
-            colors=colors,
-            func=r02_arel_param,
-            pl_profile=pl_profile,
-            xbins=dmax_bins,
-            p0=[2.26817787e-01,3.07137877e-07,5.57521446e+04], # Auger param
-            # p0=[2.64147015e-01, 5.08310712e-07, -1.30682037e+07], # GRAND param
-            plot_param=False, #plot_param,
-            ylabel=r"Sigmoid rel. amplitude $a_\mathrm{rel}$",
-            xlabel=dmax_lab,
-            ax_res_xlabel=dmax_lab_avg,
-            x_avg=dmax_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[0, 2],
-            ylim=[0, 0.5],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
-
-    else:
-        arel_rho_popt = plot_parameter(
-            axs[0, 2],
-            rho_mc,
-            arel,
-            arel_err,
-            colors=colors,
-            func=r02_arel_param_rho,
-            pl_profile=pl_profile,
-            xbins=rho_bins,
-            #   p0=[1.02057967, -1.30079264, 1.80129233],
-            p0=[2.03427784e-01, 4.04605691e-07, 1.15588788e+07, 0],
-            plot_param=plot_param,
-            ylabel=r"$a_\mathrm{rel}$",
-            xlabel=rho_lab,
-            ax_res_xlabel=rho_lab_avg,
-            x_avg=rho_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[0, 2],
-            ylim=[0, 1],
-        )
-
-    if not 0:
-        p_slope_popt = plot_parameter(
-            axs[0, 3],
-            dmax_mc,
-            p_slope,
-            p_slope_err,
-            colors=colors,
-            func=r02_arel_param,
-            pl_profile=pl_profile,
-            xbins=dmax_bins,
-            p0=[1.50262520e+00,-3.12110331e-07,2.41040614e+07],  # Auger param
-            # p0=[1.52326814e+00,-8.41306536e-07,-9.33299796e+07],  # GRAND param
-            plot_param=plot_param,
-            ylabel=r"Inner Gaussian slope $p_\mathrm{inner}$",
-            xlabel=dmax_lab,
-            ax_res_xlabel=dmax_lab_avg,
-            x_avg=dmax_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[0, 3],
-            ylim= [1.1, 1.9], # [0.95, 2.55],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
-    else:
-        p_slope_popt = plot_parameter(
-            axs[0, 3],
-            rho_mc,
-            p_slope,
-            p_slope_err,
-            colors=colors,
-            func=None,
-            pl_profile=pl_profile,
-            xbins=rho_bins,
-            p0=[-0.75262595, 1.98703018],
-            plot_param=plot_param,
-            ylabel=r"$p_slope$",
-            xlabel=rho_lab,
-            ax_res_xlabel=rho_lab_avg,
-            x_avg=rho_mc_avg,
-            plot_avg=res_avg,
-            ax_res=axs_res[1, 3]
-        )
-
-    if np.all(slope == 5):
-        axs[1, 2].axhline(5, color="C2")
-        plot_parameter(
-            axs[1, 2],
-            dmax_mc,
-            slope,
-            np.zeros_like(slope),
-            ylabel=r"Sigmoid slope $s$",
-            xlabel=dmax_lab,
-            ylim=[0, 25],
-        )
-        axs_res[1, 2].axhline(0)
-    else:
-        plot_parameter(
-            axs[1, 2], dmax_mc, slope, slope_err, ylabel=r"slope", xlabel=dmax_lab,
-            ylim=[0, 12],
-            colormap=colormap,
-            plot_colormap=show_colormap
-        )
+    plot_parameter(
+        axs[1, 2], dmax_mc, slope, slope_err, ylabel=r"slope", xlabel=dmax_lab,
+        ylim=[0, 12],
+        colormap=colormap,
+        plot_colormap=show_colormap
+    )
 
     [ax.grid() for ax in axs.flatten()]
-    [ax.set_xlim(0, 180) for ax in axs.flatten()]
-    # [ax.set_xlim(0, 230) for ax in axs.flatten()]
-    # [ax.legend() for ax in axs.flatten()]
-    # axs[1, 0].set_ylim(0, 800)
-    # axs[0, 1].set_ylim(0.5, 1)
-    # axs[0, 2].set_ylim(0.7, 1)
     fig.tight_layout()
     fig_res.tight_layout()
 
@@ -1187,11 +925,9 @@ def evaluate_gauss_sigmoid_pars(events, para):
         plt.close(fig_res)
 
     if 1:
-        # draw_offline_param(axs, helpers.get_fine_xs(dmax_mc), "C1-")
-        # draw_hard_param(axs, helpers.get_fine_xs(dmax_mc), "C1-")
-        draw_soft_param(
-            axs, helpers.get_fine_xs(r0_start),
-            helpers.get_fine_xs(dmax_mc), helpers.get_fine_xs(dmax_mc_avg),
+        draw_ldf_param(
+            axs, get_fine_xs(r0_start),
+            get_fine_xs(dmax_mc), get_fine_xs(dmax_mc_avg),
             "black",
             label="final param.",
             plot_p=True,
