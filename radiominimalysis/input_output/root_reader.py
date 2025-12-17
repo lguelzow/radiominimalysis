@@ -147,8 +147,12 @@ def read_root_file(input_directories, args=None):
             # this makes it a simulation input file so we put read_data to False
             directory = os.listdir(input_file)
             for file in directory:
-                if file.startswith('efield_'): 
-                    read_data = False
+                try:
+                    if file.startswith('efield_'):
+                        read_data = False
+                except:
+                    print("If you get this message, you either have to put a >b< in front of 'efield' in the if-condition or remove the b!")
+                    return 0
 
             # print which input is used
             if read_data:
