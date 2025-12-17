@@ -1,4 +1,4 @@
-python3 /cr/users/guelzow/simulations/radiominimalysis/scripts/CR_cherenkov_comparison.py \
+python3 /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/CR_cherenkov_comparison.py \
 --paths /cr/aera02/huege/guelzow/factories_params/GRAND_fit_results_r0.pickle \
 
 # Auger_50-200_fitted_LDFs_good_free_fit.pickle
