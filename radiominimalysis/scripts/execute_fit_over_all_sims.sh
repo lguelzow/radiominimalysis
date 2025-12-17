@@ -1,7 +1,6 @@
-python3 /cr/users/guelzow/simulations/radiominimalysis/scripts/LDF_process_all_sims_parallel.py \
+python3 /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/LDF_fit_parallel.py \
 --paths /cr/aera02/huege/guelzow/factories_LDF/GP300_ex_adc_pre_fit.pickle \
 --save GP300_ex_adc_fitted_LDFs.pickle \
---fit_results \
 --parallel_jobs 24 \
 --atmModel 41 \
 --function fit_from_pickle_param \
