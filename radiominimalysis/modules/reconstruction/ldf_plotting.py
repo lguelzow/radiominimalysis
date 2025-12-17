@@ -1228,7 +1228,12 @@ def plot_ldf(
 
 
     # 4 panel
-    if 1: 
+    # test whether you have reconstructed parameters:
+    for shower in revent.get_showers():
+        shower_type = shower.get_shower_type()
+        shower = revent.get_shower(key=shower_type)
+        
+    if shower.has_parameter(shp.zenith_recon): 
         font=32
 
         # plot layouts for 3 or 2 plot panels
