@@ -15,11 +15,10 @@ from radiominimalysis.framework.parameters import (
 from radiominimalysis.modules.reconstruction import geometry, ldf_fitting, signal_emissions
 from radiominimalysis.utilities import helpers, refractive_displacement
 
-# function to parallely use the code that takes a long time
+
+# function to parallely use code that takes a long time if run in sequence
 # for example fits and reconstructions and anything that processes simulations
 # returns processed event factory and optionally saves them as a file
-
-
 def ray_parallelisation(args):
 
     # define functions usable in parallelisation
@@ -78,7 +77,6 @@ def ray_parallelisation(args):
     elif os.path.isdir(args.paths[0]):
 
         from radiominimalysis.input_output.root_reader import ReadRootInput
-        # from radiominimalysis.input_output.root_reader import read_root_file
         
 
         # use ROOT reader tool to read out the showers from the input files
