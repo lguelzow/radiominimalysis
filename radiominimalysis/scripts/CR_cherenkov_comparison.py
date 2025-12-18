@@ -2,19 +2,15 @@ import argparse
 
 import numpy as np
 
-from RadioAnalysis.input_output import coreas_reader
-from RadioAnalysis.modules.CoREASanalysis import gauss_sigmoid_param as GS_param
-from RadioAnalysis.modules.reconstruction import geometry
-from RadioAnalysis.modules.reconstruction import signal_emissions
-from RadioAnalysis.modules.reconstruction import RAY_parallel_functions
-from RadioAnalysis.modules.CoREASanalysis import ldf_evaluation as LDF_eval
+from radiominimalysis.input_output import coreas_reader
+from radiominimalysis.modules.method_evaluation import gauss_sigmoid_param as GS_param
 
 from matplotlib import pyplot as plt
 
-from RadioAnalysis.framework import factory
-from RadioAnalysis.framework.parameters import showerParameters as shp
+from radiominimalysis.framework import factory
+from radiominimalysis.framework.parameters import showerParameters as shp
 
-from RadioAnalysis.utilities import parsers
+from radiominimalysis.utilities import parsers
 
 # get command line arguments
 # read out in separate function

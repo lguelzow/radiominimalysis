@@ -1,11 +1,11 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from RadioAnalysis.modules.CoREASanalysis import pyplots_utils as putils
+from radiominimalysis.modules.method_evaluation import pyplots_utils as putils
 from radiotools import plthelpers as php
 from radiotools import helper as hep
 
-from RadioAnalysis.utilities import helpers as rdutils
+from radiominimalysis.utilities import helpers as rdutils
 
 import numpy as np
 import sys

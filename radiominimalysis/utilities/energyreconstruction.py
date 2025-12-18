@@ -215,12 +215,12 @@ def uncertainty_in_density_from_zenith_angle_uncertainty(
 
 
 def uncertainty_in_density_from_zenith_angle_uncertainty_event(events):
-    import RadioAnalysis.framework.revent
+    import radiominimalysis.framework.revent
     import warnings
-    from RadioAnalysis.framework.parameters import showerParameters as shp, \
+    from radiominimalysis.framework.parameters import showerParameters as shp, \
         eventParameters as evp, stationParameters as stp
 
-    if isinstance(events, RadioAnalysis.framework.revent):
+    if isinstance(events, radiominimalysis.framework.revent):
         events = [events]
 
     rho_uncerts = np.empty((len(events), 2))
