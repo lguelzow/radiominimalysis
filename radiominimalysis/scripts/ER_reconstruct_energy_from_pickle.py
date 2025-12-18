@@ -40,8 +40,6 @@ events = readout_factory.get_events()
 
 LDF_eval.evaluate_fit_result(events, args)
 
-# eff.plot_aperture_and_event_numbers(events, args)
-
 # LDF_eval.evaluate_dmax_fit(events, args)
 
 # GS_param(events, args)
