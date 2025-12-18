@@ -1,3 +1,8 @@
+### Code written by Lukas Gülzow and Felix Schlüter
+
+### If you use this code for a publication, please cite https://arxiv.org/abs/2507.06698 and https://arxiv.org/abs/2203.04364.
+
+
 Reduced version of RadioAnalysis for GRAND reconstruction and modifications based on simulations
 Will mainly contain the main files needed for these purposes while leaving out the rest of the old repository
 
