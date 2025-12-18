@@ -9,8 +9,7 @@ from radiominimalysis.modules.method_evaluation.gauss_sigmoid_param import get_b
 from radiotools.atmosphere import models as atm
 from radiotools.analyses import radiationenergy
 from radiotools import helper
-
-from radiominimalysis.utilities import pyplots
+from radiotools import plthelpers as php
 
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -1942,7 +1941,7 @@ def evaluate_fit_result(events, para):
     # Primary Plot
     if 1:
         # hist energy resolution
-        fig_primary, ax = pyplots.rphp.get_histogram(
+        fig_primary, ax = php.get_histogram(
             eem_pred / eem_mc, bins=np.linspace(0.5, 1.5, 25), figsize=(13, 10.5),
             stat_kwargs={
                 'fontsize': "small", "ha": "right", "posx": 0.985, "posy": 0.98},

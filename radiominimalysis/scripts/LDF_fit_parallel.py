@@ -4,7 +4,7 @@ from radiominimalysis.framework import factory
 from radiominimalysis.framework.parameters import (
     showerParameters as shp,
 )
-from radiominimalysis.modules.reconstruction import (
+from radiominimalysis.modules.parallelisation import (
     RAY_parallel_functions,
 )
 from radiominimalysis.utilities import parsers, energyreconstruction

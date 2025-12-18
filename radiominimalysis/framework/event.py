@@ -85,9 +85,6 @@ class BaseEvent(ParameterStorage):
 
         # return all air showers in the event object if key matches
         for shower in self.get_showers():
-            # print(shower.get_shower_type(), key)
-            # print(key)
-            # print(shower.get_shower_type() == key)
             if shower.get_shower_type() == key:
                 return shower
 

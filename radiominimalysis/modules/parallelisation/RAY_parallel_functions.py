@@ -13,8 +13,15 @@ from radiominimalysis.framework.parameters import (
     stationParameters as stp,
 )
 from radiominimalysis.modules.reconstruction import geometry, ldf_fitting, signal_emissions
-from radiominimalysis.utilities import helpers, refractive_displacement
+from radiominimalysis.utilities import refractive_displacement
 
+
+
+def format_label(args):
+    if args.label is not None and args.label != "":
+        args.label = "_" + args.label if args.label[0] != "_" else args.label
+    else:
+        args.label = ""
 
 # function to parallely use code that takes a long time if run in sequence
 # for example fits and reconstructions and anything that processes simulations
@@ -44,7 +51,7 @@ def ray_parallelisation(args):
     # converting showertype string to enum name of showertype
     args.shower = shower_types[args.shower]
     # formatting label, if not empty add a trailing "_"
-    helpers.format_label(args)
+    format_label(args)
     # events = []
 
     # check if there are paths given

@@ -5,8 +5,8 @@ python3 /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/
 --atmModel 41 \
 --function fit_from_pickle_param \
 --shower sim_shower \
---realistic_input \
---plot \
+# --realistic_input \
+# --plot \
 
 
 # --only_infill \
