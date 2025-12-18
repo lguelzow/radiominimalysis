@@ -1088,7 +1088,7 @@ def post_process_store(revent, result, select_or_cleaned, para):
     shower.set_parameter(shp.core_fit_shower_plane, 
                             cs.transform_to_vxB_vxvxB(np.array([core_fit_ground_plane[0], core_fit_ground_plane[1], 0])))
 
-    if 1:
+    if para.realistic_input:
 
         run_no = revent.get_run_number()
         evt_no = revent.get_id()
