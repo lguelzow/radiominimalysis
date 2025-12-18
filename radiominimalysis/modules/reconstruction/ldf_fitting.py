@@ -663,7 +663,7 @@ def _fit_param_has_ldf(revent, para):
 
     # if core_gp[0] != 0 and not re_fit:
     # masks for reconstruction and signal model case to improve fit quality in both
-    if 1: # revent.has_station_parameter(stp.energy_fluence_snr) or revent.has_station_parameter(stp.energy_fluence_noisy): # version for reconstruction
+    if para.realistic_input: # revent.has_station_parameter(stp.energy_fluence_snr) or revent.has_station_parameter(stp.energy_fluence_noisy): # version for reconstruction
         
         print("Use calculated errors!")
         

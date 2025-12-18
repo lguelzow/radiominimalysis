@@ -12,6 +12,7 @@ __pycache__
 *.npz
 *.csv
 *.txt
+*.jpg
 
 # Ignore PyCharm stuff
 .idea

@@ -1184,7 +1184,7 @@ def evaluate_fit_result(events, para):
         plt.close()
 
 
-    if 1:
+    if 0:
         # histogram of LDF fit pull values
 
         font = 40
@@ -1194,7 +1194,7 @@ def evaluate_fit_result(events, para):
         pull_mean = np.mean(fluence_pull)
         pull_width = np.std(fluence_pull)
         
-        # np.savez_compressed(f"LDF_fit_pull_gp300_adc", fluence_pull)
+        np.savez_compressed(f"LDF_fit_pull_gp300_adc", fluence_pull)
         
         pull_data_file = np.load('/cr/users/guelzow/simulations/radiominimalysis/ldf_eval/LDF_fit_pull_gp300_adc.npz')
         pull_data = pull_data_file['arr_0']
