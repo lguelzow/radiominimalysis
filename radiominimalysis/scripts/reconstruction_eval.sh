@@ -4,8 +4,6 @@ python /cr/users/guelzow/simulations/radiominimalysis/radiominimalysis/scripts/E
 --plot \
 # --realistic_input \
 
-
-
 # GRAND starshapes 50-200
 # /cr/aera02/huege/guelzow/factories/GRAND_50-200_fitted_LDFs.pickle
 
