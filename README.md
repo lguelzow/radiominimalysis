@@ -1,14 +1,13 @@
-### Code written by Lukas Gülzow and Felix Schlüter
+# Introduction
 
-### If you use this code for a publication, please cite https://arxiv.org/abs/2507.06698 and https://arxiv.org/abs/2203.04364.
+***Code written by Lukas Gülzow and Felix Schlüter***
 
+If you use this code for a publication, please cite https://arxiv.org/abs/2507.06698 and https://arxiv.org/abs/2203.04364.
 
-Reduced version of RadioAnalysis for GRAND reconstruction and modifications based on simulations
-Will mainly contain the main files needed for these purposes while leaving out the rest of the old repository
+Reduced version of RadioAnalysis for GRAND reconstruction and modifications based on simulations. Will mainly contain the main files needed for these purposes while leaving out the rest of the old repository.
 
-# Installation
+## Installation
 Many ways you could set it up, but my recommendation is a virtual environment with
-
 - locally installed ROOT (follow instructions on official ROOT website and download the right build for you)
 - GRANDlib inside the environment which includes turtle and gull for coordinate trafos (ask people in the collaboration to help you with setting it up)
 - python version (needs to match ROOT version!!) installed in the environment with .pth files for the required packages 
@@ -18,47 +17,42 @@ Currently, the repo works with ROOT 6.36 and python 3.10.12
 ## Specifically, you need these modules:
 
 Some pip modules needed (install with pip --user install <module>):
-
 - iminuit, lmfit, scipy, numpy, matplotlib, ray
 
 External packages needed for full usage of reconstuction: 
-
- - radiotools (https://github.com/nu-radio/radiotools.git) (get github version for GRAND atmosphere model, labelled 41)
- - GRANDlib (for any interactions with simulations processed by GRAND or measurement data)
-    (https://github.com/grand-mother/grand.git "dev" branch [status: 28.11.2025])
+- radiotools (https://github.com/nu-radio/radiotools.git) (get github version for GRAND atmosphere model, labelled 41)
+- GRANDlib (for any interactions with simulations processed by GRAND or measurement data)
+   (https://github.com/grand-mother/grand.git "dev" branch [status: 28.11.2025])
  - electric field reconstruction (for realistic ADC trace simulations and measurement data)
-    (https://github.com/grand-mother/E-Field-reconstruction-preliminary for a method from Kewen Zhang, modified by Lukas Gülzow)
+   (https://github.com/grand-mother/E-Field-reconstruction-preliminary for a method from Kewen Zhang, modified by Lukas Gülzow)
  - PWF_reconstruction (for reconstruction of arrival direction)
-    (https://github.com/arsenefer/PWF_reconstruction.git)
+   (https://github.com/arsenefer/PWF_reconstruction.git)
 
-Clone them (with "git clone") and add them to your PYTHONPATH environmental variable
+Clone them (with "git clone") and add them to your PYTHONPATH environmental variable.
 
-You have to add the root path of this project to your PYTHONPATH, i.e.,
-export PYTHONPATH=$PYTHONPATH:/path/to/RadioAnalysis
-
+You have to add the root path of this project to your PYTHONPATH, i.e., export PYTHONPATH=$PYTHONPATH:/path/to/RadioAnalysis
 
 # Framework and Data Storage
 The "framework" folder contains the important classes for organisation and data storage:
-
-parameter_storage: list of named parameters under which data and reconstructed values can be saved on event, shower and antenna scale
-
-event & revent: classes to handle simulated and measured events including many functions to extract and save data in the form of named parameters
-
-shower: initialisable shower class to store more specific shower parameters
-
-factory: class to handle and store many events at once
+- parameter_storage: list of named parameters under which data and reconstructed values can be saved on event, shower and antenna scale
+- event & revent: classes to handle simulated and measured events including many functions to extract and save data in the form of named parameters
+- shower: initialisable shower class to store more specific shower parameters
+- factory: class to handle and store many events at once
 
 ## Data storage
-Event data and reconstructed parameters can be saved from the factory class format into .pickle files for later use without rerunnning reconstruction or any other calculations
-Read in .pickle files again to reinitialise factory object
+Event data and reconstructed parameters can be saved from the factory class format into .pickle files for later use without rerunnning reconstruction or any other calculations.
 
+Read in .pickle files again to reinitialise factory object.
 
 # Reconstruction
 Long chain of files using almost all parts of this repository.
-Starts either with "LDF_fit_single_file" for single files or "LDF_fit_parallel" for many files parallelised.
-Measurement data is processed with the single-file pipeline, but can be extended and parallelised if necessary for bigger data load.
-Parallel pipeline is made for evaluating the reconstruction with a large number of simulated events, as well as tuning the model parameters.
 
+Starts either with "LDF_fit_single_file" for single files or "LDF_fit_parallel" for many files parallelised.
+
+
+Measurement data is processed with the single-file pipeline, but can be extended and parallelised if necessary for bigger data load.
+
+Parallel pipeline is made for evaluating the reconstruction with a large number of simulated events, as well as tuning the model parameters.
 
 ## Parallel pipelines
 
@@ -66,9 +60,7 @@ Parallel pipeline is set up as a sequence of .sh scripts:
 - for hdf5: *prefit.sh* -> *execute_fit_over_all_sims.sh* -> *reconstruction_eval.sh*
 - for GRANDROOT: *read_root_files.sh* -> *prefit.sh* -> *execute_fit_over_all_sims.sh* -> *reconstruction_eval.sh*
 
-In these scripts you can change some of the pipeline variables, like the atmosphere model and whether you using idealistic or realistic input.
-These input modes decide whether you use MC data or reconstructed/estimated values for arrival direction, core position, and Xmax.
-
+In these scripts you can change some of the pipeline variables, like the atmosphere model and whether you using idealistic or realistic input. These input modes decide whether you use MC data or reconstructed/estimated values for arrival direction, core position, and Xmax.
 
 Other parameters and functionalities of the pipelines have to be changed in the functions the scripts are calling:
 
@@ -88,20 +80,19 @@ Importantly, for accurate energy reconstruction output on the LDF plots, you nee
 In *ldf_plotting.py*, you can adjust the single LDF plots.
 
 In *ldf_evaluation.py*, you can output the parallel pipeline for many events and evaluate the collective fit results and adjust the energy reconstruction.
-The file is very long, but sectioned into each functionality. The main function is *evaluate_fit_result*.
 
+The file is very long, but sectioned into each functionality. The main function is *evaluate_fit_result*.
 
 ## Example commands:
 
-### Single files, valid for data and sims:
-
+Single files, valid for data and sims:
 - reconstruction and ldf fit of a single file in hdf5 format: *python [path_to_radiominimalysis]/scripts/LDF_fit_single_file.py --atmModel 41 --plot [path_to_hdf5_sim]*
 - reconstruction and ldf fit of an event or events in GRANDROOT format: *python [path_to_radiominimalysis]/scripts/LDF_fit_single_file.py -m 41 -p [path_to_ROOT]*
 
 For real measurements, you have to add the option "-real" to enable to realistic_input pipeline
 
 ### Parallel
-Central file: *RAY_parallel_functions.py*
+Central file: *RAY_parallel_functions.py*.
 
 Keep in mind that you have to adjust path according to your system and data storage locations.
 In the .sh scripts, you have to choose the path to your data as well as file names for the .pickle files.
@@ -112,16 +103,13 @@ The location where the .pickle files are stored, can be set in *RAY_parallel_fun
 - Perform LDF fit for all events: *[path to radiominimalysis]/scripts/execute_fit_over_all_sims.sh*
 - Evaluate LDF fit results: *[path to radiominimalysis]/scripts/reconstruction_eval.sh*
 
-
 # Scripts
 Usage of the python scripts included in this repository:
-
 - *CE_charge_excess_eval.py*: Evaluation of charge excess fraction parametrisation
 - *CE_charge_excess_eparam_new.py*: Enables new fit of charge excess fraction parametrisation
 - *check_cherenkov_radii.sh*: Calls *CR_cherenkov_comparison.py* for given completed LDF fits, which evaluates the offset from the theoretically predicted Cherenkov angle for the radio emission
 - *ER_reconstruct_energy_from_pickle.py*: Called by *reconstruction_eval.sh*. Choose inside which parts of reconstruction to evaluate
 - *FP_fluence_step-by-step.py*: Plot interpolated fluence footprints for an .hdf5 file, in the sequence the model isolates the geomagnetic emission
-
 
 # Model Tuning
 To be expanded...
